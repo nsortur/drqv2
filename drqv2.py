@@ -86,12 +86,14 @@ class Encoder(nn.Module):
                       kernel_size=3, padding=1),
             enn.ReLU(enn.FieldType(self.c4_act, n_out//2 * \
                     [self.c4_act.regular_repr]), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(
-                self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-            # TODO try with pointwise average pool without trunk
-            enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-                       enn.FieldType(self.c4_act, 32 * [self.c4_act.trivial_repr]),
-                       kernel_size=1)
+#             enn.PointwiseMaxPool(enn.FieldType(
+#                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
+#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
+#                        enn.FieldType(self.c4_act, 32 * [self.c4_act.trivial_repr]),
+#                        kernel_size=1),
+            # TODO try different kernel sizes than 11
+            enn.PointwiseAvgPool(enn.FieldType(
+                self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 11)
             # 16x16
 
 
@@ -158,7 +160,8 @@ class Actor(nn.Module):
 #                        enn.FieldType(self.r2_rot, ))
 #         )
 
-        self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
+        # TODO don't hardcode 512
+        self.policy = nn.Sequential(nn.Linear(512, hidden_dim),
                                     nn.ReLU(inplace=True),
                                     nn.Linear(hidden_dim, hidden_dim),
                                     nn.ReLU(inplace=True),
@@ -167,7 +170,7 @@ class Actor(nn.Module):
         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-        h = self.trunk(obs)
+        h = obs #self.trunk(obs)
 
         mu = self.policy(h)
         mu = torch.tanh(mu)
@@ -183,21 +186,21 @@ class Critic(nn.Module):
 
         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
                                    nn.LayerNorm(feature_dim), nn.Tanh())
-
+        # TODO don't hardcode 512
         self.Q1 = nn.Sequential(
-            nn.Linear(feature_dim + action_shape[0], hidden_dim),
+            nn.Linear(512 + action_shape[0], hidden_dim),
             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
 
         self.Q2 = nn.Sequential(
-            nn.Linear(feature_dim + action_shape[0], hidden_dim),
+            nn.Linear(512 + action_shape[0], hidden_dim),
             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
 
         self.apply(utils.weight_init)
 
     def forward(self, obs, action):
-        h = self.trunk(obs)
+        h = obs #self.trunk(obs)
         h_action = torch.cat([h, action], dim=-1)
         q1 = self.Q1(h_action)
         q2 = self.Q2(h_action)
