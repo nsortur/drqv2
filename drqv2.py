@@ -52,7 +52,8 @@ class Encoder(nn.Module):
         super().__init__()
 
         assert len(obs_shape) == 3
-        self.repr_dim = 32 * 35 * 35
+        # TODO why isn't it 16x16
+        self.repr_dim = 32 * 10 * 10
 
         # number of out channels
         n_out = 128
@@ -87,6 +88,7 @@ class Encoder(nn.Module):
                     [self.c4_act.regular_repr]), inplace=True),
             enn.PointwiseMaxPool(enn.FieldType(
                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
+            # TODO try with pointwise average pool without trunk
             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
                        enn.FieldType(self.c4_act, 32 * [self.c4_act.trivial_repr]),
                        kernel_size=1)
