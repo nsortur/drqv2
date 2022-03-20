@@ -59,7 +59,6 @@ class Encoder(nn.Module):
         n_out = 128
         self.c4_act = gspaces.Rot2dOnR2(8)
         self.convnet = nn.Sequential(
-# 128x128
             enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
                       enn.FieldType(self.c4_act, n_out//8 * \
                                    [self.c4_act.regular_repr]),
@@ -68,7 +67,7 @@ class Encoder(nn.Module):
                     [self.c4_act.regular_repr]), inplace=True),
             enn.PointwiseMaxPool(enn.FieldType(
                 self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
-# 64x64
+
             enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
                       enn.FieldType(self.c4_act, n_out//4 * \
                                    [self.c4_act.regular_repr]),
@@ -77,7 +76,6 @@ class Encoder(nn.Module):
                     [self.c4_act.regular_repr]), inplace=True),
             enn.PointwiseMaxPool(enn.FieldType(
                 self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
-# 32x32
 
 
             enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
@@ -88,7 +86,7 @@ class Encoder(nn.Module):
                     [self.c4_act.regular_repr]), inplace=True),
             enn.PointwiseMaxPool(enn.FieldType(
                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-            # TODO try with pointwise average pool without trunk
+
             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
                        enn.FieldType(self.c4_act, 32 * [self.c4_act.trivial_repr]),
                        kernel_size=1)
@@ -135,6 +133,14 @@ class Encoder(nn.Module):
 #                                      nn.ReLU())
 
         self.apply(utils.weight_init)
+
+    def __getstate__(self):
+        """Overriden to handle not being able to pickle e2cnn network"""
+        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        return res
+
+    def _should_pickle(self, val):
+        return val != 'c4_act' and val != '_modules'
 
     def forward(self, obs):
         assert(len(obs.shape) == 4)
@@ -257,6 +263,10 @@ class DrQV2Agent:
             if step < self.num_expl_steps:
                 action.uniform_(-1.0, 1.0)
         return action.cpu().numpy()[0]
+
+    def save_enc(self, subdir):
+        """Saves encoder weights to given directory"""
+        torch.save(self.encoder.state_dict(), subdir)
 
     def update_critic(self, obs, action, reward, discount, next_obs, step):
         metrics = dict()

@@ -14,6 +14,9 @@ from pathlib import Path
 import hydra
 import numpy as np
 import torch
+from torch import nn
+import e2cnn.nn as enn
+from e2cnn import gspaces
 from dm_env import specs
 
 import dmc
@@ -21,6 +24,7 @@ import utils
 from logger import Logger
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from video import TrainVideoRecorder, VideoRecorder
+from collections import OrderedDict
 
 torch.backends.cudnn.benchmark = True
 
@@ -47,6 +51,7 @@ class Workspace:
         self.timer = utils.Timer()
         self._global_step = 0
         self._global_episode = 0
+        self.enc_weight_dir = os.path.join(self.work_dir, 'encWeights.pt')
 
     def setup(self):
         # create logger
@@ -195,6 +200,7 @@ class Workspace:
         payload = {k: self.__dict__[k] for k in keys_to_save}
         with snapshot.open('wb') as f:
             torch.save(payload, f)
+        self.agent.save_enc(self.enc_weight_dir)
 
     def load_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
@@ -202,12 +208,54 @@ class Workspace:
             payload = torch.load(f)
         for k, v in payload.items():
             self.__dict__[k] = v
+        
+        # reset non-picklable states
+        c4_act = gspaces.Rot2dOnR2(8)
+        od = OrderedDict()
+        n_out = 128
+        obs_shape = ()
+        od['convnet'] = nn.Sequential(
+            enn.R2Conv(enn.FieldType(c4_act, obs_shape[0] * [c4_act.trivial_repr]),
+                      enn.FieldType(c4_act, n_out//8 * \
+                                   [c4_act.regular_repr]),
+                      kernel_size=3, padding=1),
+            enn.ReLU(enn.FieldType(c4_act, n_out//8 * \
+                    [c4_act.regular_repr]), inplace=True),
+            enn.PointwiseMaxPool(enn.FieldType(
+                c4_act, n_out//8 * [c4_act.regular_repr]), 2),
 
+            enn.R2Conv(enn.FieldType(c4_act, n_out//8 * [c4_act.regular_repr]),
+                      enn.FieldType(c4_act, n_out//4 * \
+                                   [c4_act.regular_repr]),
+                      kernel_size=3, padding=1),
+            enn.ReLU(enn.FieldType(c4_act, n_out//4 * \
+                    [c4_act.regular_repr]), inplace=True),
+            enn.PointwiseMaxPool(enn.FieldType(
+                c4_act, n_out//4 * [c4_act.regular_repr]), 2),
+
+
+            enn.R2Conv(enn.FieldType(c4_act, n_out//4 * [c4_act.regular_repr]),
+                      enn.FieldType(c4_act, n_out//2 * \
+                                   [c4_act.regular_repr]),
+                      kernel_size=3, padding=1),
+            enn.ReLU(enn.FieldType(c4_act, n_out//2 * \
+                    [c4_act.regular_repr]), inplace=True),
+            enn.PointwiseMaxPool(enn.FieldType(
+                c4_act, n_out//2 * [c4_act.regular_repr]), 2),
+
+            enn.R2Conv(enn.FieldType(c4_act, n_out//2 * [c4_act.regular_repr]),
+                       enn.FieldType(c4_act, 32 * [c4_act.trivial_repr]),
+                       kernel_size=1)
+         )
+        self.agent._modules = od
+        self.agent.c4_act = c4_act
+        self.agent.convnet.load_state_dict(self.enc_weight_dir)
 
 @hydra.main(config_path='cfgs', config_name='config')
 def main(cfg):
     from train import Workspace as W
     root_dir = Path.cwd()
+    print('root:', root_dir)
     workspace = W(cfg)
     snapshot = root_dir / 'snapshot.pt'
     if snapshot.exists():
