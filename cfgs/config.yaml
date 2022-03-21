@@ -49,7 +49,7 @@ agent:
 hydra:
   run:
 #     dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
-    dir: ./exp_local/2022.03.19/194554_task=reacher_easy
+    dir: ./exp_local/2022.03.20/010605_task=quadruped_walk
   sweep:
     dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${agent_cfg.experiment}
     subdir: ${hydra.job.num}

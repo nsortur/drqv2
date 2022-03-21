@@ -17,29 +17,9 @@
 #SBATCH --exclude=c[2160,2162-2175,2176-2183],d1008,d1026
 ##SBATCH --gres=gpu:v100-sxm2
 
-export PYTHONPATH="/scratch/wang.dian/python_packages/helping_hands_rl_envs"
+# export PYTHONPATH="/scratch/wang.dian/python_packages/helping_hands_rl_envs"
 
 echo "node: $SLURM_NODELIST"
-
-args="
---env=close_loop_block_picking
---simulator=pybullet
---robot=kuka
---alg=dqn_com
---model=cnn
---gamma=0.99
---perlin=0.
---init_eps=0.5
---planner_episode=100
---explore=1000
---num_objects=1
---no_bar
---num_process=5
---log_pre=/scratch/wang.dian/block_picking_results
---time_limit=7
---max_episode=10000
---batch_size=32
-"
 env="task=reacher_easy"
 
 # probably don't need to do that (parallel m)
@@ -54,9 +34,10 @@ do
     else
 
     	load=${LOAD_SUB}_${i}
+      log=load
     fi
     seed=$(($SEED+($i)))
-    python train.py --log_sub=${log} --load_sub=${load} --seed=${seed} ${env} $@ &
+    python train.py ${env} ${log} $@ &
     PIDS+=($!)
 done
 

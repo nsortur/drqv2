@@ -213,8 +213,9 @@ class Workspace:
         c4_act = gspaces.Rot2dOnR2(8)
         od = OrderedDict()
         n_out = 128
-        obs_shape = ()
-        od['convnet'] = nn.Sequential(
+        # TODO don't hardcode this
+        obs_shape = (9, 84, 84)
+        net = nn.Sequential(
             enn.R2Conv(enn.FieldType(c4_act, obs_shape[0] * [c4_act.trivial_repr]),
                       enn.FieldType(c4_act, n_out//8 * \
                                    [c4_act.regular_repr]),
@@ -247,9 +248,15 @@ class Workspace:
                        enn.FieldType(c4_act, 32 * [c4_act.trivial_repr]),
                        kernel_size=1)
          )
-        self.agent._modules = od
-        self.agent.c4_act = c4_act
-        self.agent.convnet.load_state_dict(self.enc_weight_dir)
+        dict_init = torch.load(self.enc_weight_dir)
+        dict_ad = {k.replace('convnet.', ''): v for k, v in dict_init.items()}
+        net.load_state_dict(dict_ad)
+        net.to('cuda')
+        # TODO maybe deepcopy?
+        od['convnet'] = net
+        # self.agent.encoder.convnet = net
+        self.agent.encoder._modules = od
+        self.agent.encoder.c4_act = c4_act
 
 @hydra.main(config_path='cfgs', config_name='config')
 def main(cfg):

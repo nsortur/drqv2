@@ -266,7 +266,7 @@ class DrQV2Agent:
 
     def save_enc(self, subdir):
         """Saves encoder weights to given directory"""
-        torch.save(self.encoder.state_dict(), subdir)
+        torch.save(self.encoder.convnet.eval().state_dict(), subdir)
 
     def update_critic(self, obs, action, reward, discount, next_obs, step):
         metrics = dict()
