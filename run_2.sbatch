@@ -18,6 +18,7 @@
 ##SBATCH --gres=gpu:v100-sxm2
 
 # export PYTHONPATH="/scratch/wang.dian/python_packages/helping_hands_rl_envs"
+export PYTHONPATH="/home/sortur.n/.conda/envs/drqv2/bin/python"
 
 echo "node: $SLURM_NODELIST"
 env="task=reacher_easy"
