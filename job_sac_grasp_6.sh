@@ -36,55 +36,55 @@ jn=testing
 # --training_iter=1
 # --fix_set=f
 # "
-slurm_args=""
 
 jn1=${jn}_1
-jid[1]=$(sbatch --test-only ${slurm_args} --job-name=${jn1} --export=SEED=${seed},LOAD_SUB='None' ${script} | tr -dc '0-9')
+jid[1]=$(sbatch --test-only --job-name=${jn1} --export=SEED=${seed},START_DIRNAME='first' ${script} | tr -dc '0-9')
+
 for j in {2..2}
 do
-jid[${j}]=$(sbatch --test-only ${slurm_args} --job-name=${jn}_${j} --dependency=afterok:${jid[$((j-1))]} --export=SEED=${seed},LOAD_SUB=${jn}_$((j-1))_${jid[$((j-1))]} ${script} ${args} | tr -dc '0-9')
+jid[${j}]=$(sbatch --test-only --job-name=${jn}_${j} --dependency=afterok:$1 --export=SEED=${seed},START_DIRNAME='first' ${script} | tr -dc '0-9')
 done
 }
 
 runall_2()
 {
-script=run_2.sbatch
+script=run_drqv2.sbatch
 seed=0
 run
 # seed=2
 # run
 }
 
-runall_1()
-{
-script=run_1.sbatch
-seed=0
-run
-seed=1
-run
-seed=2
-run
-seed=3
-run
-}
-
-date=0314
-
-N=4
-
-planner=100
-env=close_loop_clutter_picking
-num_objects=5
-env_abbr=grasp_5_p100
-gamma=0.9
-buffer=normal
-buffer_aug_type=dqn_c4
-
-alg=sdqfd_fac
-
-view_type=camera_fix_rgbd
-
-model=equi_d_w_enc
+# runall_1()
+# {
+# script=run_1.sbatch
+# seed=0
+# run
+# seed=1
+# run
+# seed=2
+# run
+# seed=3
+# run
+# }
+# 
+# date=0314
+# 
+# N=4
+# 
+# planner=100
+# env=close_loop_clutter_picking
+# num_objects=5
+# env_abbr=grasp_5_p100
+# gamma=0.9
+# buffer=normal
+# buffer_aug_type=dqn_c4
+# 
+# alg=sdqfd_fac
+# 
+# view_type=camera_fix_rgbd
+# 
+# model=equi_d_w_enc
 runall_2
 
 # model=equi_d_w_fcn

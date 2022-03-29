@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - task@_global_: quadruped_walk
+  - task@_global_: cheetah_run
   - override hydra/launcher: submitit_local
 
 # task settings
@@ -49,7 +49,7 @@ agent:
 hydra:
   run:
 #     dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
-#     dir: ./exp_local/2022.03.20/010605_task=quadruped_walk
+#     dir: ./exp_local/2022.03.23/011227_task=reacher_hard
     dir: ./exp_local/${hydra.job.override_dirname}
   sweep:
     dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${agent_cfg.experiment}

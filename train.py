@@ -210,7 +210,7 @@ class Workspace:
             self.__dict__[k] = v
         
         # reset non-picklable states
-        c4_act = gspaces.Rot2dOnR2(8)
+        c4_act = gspaces.FlipRot2dOnR2(4)
         od = OrderedDict()
         n_out = 128
         # TODO don't hardcode this
