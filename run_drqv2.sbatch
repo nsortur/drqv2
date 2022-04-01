@@ -5,7 +5,8 @@
 
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:v100-sxm2
+##SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64GB
@@ -15,12 +16,11 @@
 #SBATCH --mail-user=sortur.n@northeastern.edu
 
 #SBATCH --exclude=c[2160,2162-2175,2176-2183],d1008,d1026
-##SBATCH --gres=gpu:v100-sxm2
 
 export PYTHONPATH="/home/sortur.n/drqv2/"
 
 echo "node: $SLURM_NODELIST"
-task="task=cheetah_run"
+task="task=acrobot_swingup"
 # taken from shell script
 start_dirname=$START_DIRNAME
 

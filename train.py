@@ -143,7 +143,9 @@ class Workspace:
         while train_until_step(self.global_step):
             if time_step.last():
                 self._global_episode += 1
-                self.train_video_recorder.save(f'{self.global_frame}.mp4')
+                if self.global_frame % 100000 == 0:
+                    # save vid every 100k frames instead of every 10k
+                    self.train_video_recorder.save(f'{self.global_frame}.mp4')
                 # wait until all the metrics schema is populated
                 if metrics is not None:
                     # log stats
@@ -210,7 +212,7 @@ class Workspace:
             self.__dict__[k] = v
         
         # reset non-picklable states
-        c4_act = gspaces.FlipRot2dOnR2(4)
+        c4_act = gspaces.Rot2dOnR2(8)
         od = OrderedDict()
         n_out = 128
         # TODO don't hardcode this

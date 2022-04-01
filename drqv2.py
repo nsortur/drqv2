@@ -57,8 +57,8 @@ class Encoder(nn.Module):
 
         # number of out channels
         n_out = 128
-        # self.c4_act = gspaces.Rot2dOnR2(8)
-        self.c4_act = gspaces.FlipRot2dOnR2(4)
+        self.c4_act = gspaces.Rot2dOnR2(8)
+#         self.c4_act = gspaces.FlipRot2dOnR2(4)
         self.convnet = nn.Sequential(
             enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
                       enn.FieldType(self.c4_act, n_out//8 * \

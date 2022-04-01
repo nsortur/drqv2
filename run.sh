@@ -1,9 +1,10 @@
-jn="flip4_equi"
+jn="rot8_equi_2"
 
 start_dir=${jn}
-script=run_drqv2_2.sbatch
+script=run_drqv2.sbatch
 
 jid[1]=$(./run_help.sh ${jn} ${start_dir} ${script} | tr -dc '0-9')
+echo ${jid[1]}
 
 for j in {2..3}
 do
