@@ -1,4 +1,6 @@
-jn="rot8_equi_2"
+# ACTIVATE CONDA ENV BEFORE RUNNING
+jn="equi_actrep1"
+#export TASK_MUJOCO=acrobot_swingup
 
 start_dir=${jn}
 script=run_drqv2.sbatch
@@ -8,6 +10,6 @@ echo ${jid[1]}
 
 for j in {2..3}
 do
-  echo ${jid[$((j-1))]}
   jid[${j}]=$(./run_help2.sh ${jn}_${j} ${jid[$((j-1))]} ${start_dir} ${script} | tr -dc '0-9')
+  echo ${jid[$((j))]}
 done
