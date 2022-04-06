@@ -52,45 +52,48 @@ class Encoder(nn.Module):
         super().__init__()
 
         assert len(obs_shape) == 3
-        # TODO why isn't it 16x16
-        self.repr_dim = 32 * 10 * 10
+#         self.repr_dim = 32 * 10 * 10
 
         # number of out channels
+        # TODO move this, but for now just change manually
         n_out = 128
-        self.c4_act = gspaces.Rot2dOnR2(8)
+        self.repr_dim = n_out
+#         self.c4_act = gspaces.Rot2dOnR2(8)
 #         self.c4_act = gspaces.FlipRot2dOnR2(4)
-        self.convnet = nn.Sequential(
-            enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
-                      enn.FieldType(self.c4_act, n_out//8 * \
-                                   [self.c4_act.regular_repr]),
-                      kernel_size=3, padding=1),
-            enn.ReLU(enn.FieldType(self.c4_act, n_out//8 * \
-                    [self.c4_act.regular_repr]), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(
-                self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
-
-            enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
-                      enn.FieldType(self.c4_act, n_out//4 * \
-                                   [self.c4_act.regular_repr]),
-                      kernel_size=3, padding=1),
-            enn.ReLU(enn.FieldType(self.c4_act, n_out//4 * \
-                    [self.c4_act.regular_repr]), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(
-                self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
-
-
-            enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
-                      enn.FieldType(self.c4_act, n_out//2 * \
-                                   [self.c4_act.regular_repr]),
-                      kernel_size=3, padding=1),
-            enn.ReLU(enn.FieldType(self.c4_act, n_out//2 * \
-                    [self.c4_act.regular_repr]), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(
-                self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-
-            enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-                       enn.FieldType(self.c4_act, 32 * [self.c4_act.trivial_repr]),
-                       kernel_size=1)
+#         self.convnet = nn.Sequential(
+#             enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
+#                       enn.FieldType(self.c4_act, n_out//8 * \
+#                                    [self.c4_act.regular_repr]),
+#                       kernel_size=3, stride=2, padding=1),
+#             enn.ReLU(enn.FieldType(self.c4_act, n_out//8 * \
+#                     [self.c4_act.regular_repr]), inplace=True),
+#             enn.PointwiseMaxPool(enn.FieldType(
+#                 self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
+# 
+#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
+#                       enn.FieldType(self.c4_act, n_out//4 * \
+#                                    [self.c4_act.regular_repr]),
+#                       kernel_size=3, stride=2, padding=1),
+#             enn.ReLU(enn.FieldType(self.c4_act, n_out//4 * \
+#                     [self.c4_act.regular_repr]), inplace=True),
+#             enn.PointwiseMaxPool(enn.FieldType(
+#                 self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
+# 
+# 
+#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
+#                       enn.FieldType(self.c4_act, n_out//2 * \
+#                                    [self.c4_act.regular_repr]),
+#                       kernel_size=3, stride=2, padding=1),
+#             enn.ReLU(enn.FieldType(self.c4_act, n_out//2 * \
+#                     [self.c4_act.regular_repr]), inplace=True),
+#             enn.PointwiseMaxPool(enn.FieldType(
+#                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
+# 
+#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
+#                        enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
+#                        kernel_size=1),
+#             enn.ReLU(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
+#                        inplace=True)
             # 16x16
 
 
@@ -126,14 +129,14 @@ class Encoder(nn.Module):
 #             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
 #                     [self.c4_act.regular_repr]), inplace=True),
 # 1x1
-        )
+#         )
 #         self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0], 32, 3, stride=2),
 #                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
 #                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
 #                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
 #                                      nn.ReLU())
 
-        self.apply(utils.weight_init)
+#         self.apply(utils.weight_init)
 
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
@@ -148,9 +151,8 @@ class Encoder(nn.Module):
         obs = obs / 255.0 - 0.5
         geo = enn.GeometricTensor(obs, enn.FieldType(self.c4_act,
                                                      obs.shape[1] * [self.c4_act.trivial_repr]))
-        # TODO: try not converting to tensor every time
-        h = self.convnet(geo).tensor
-        h = h.view(h.shape[0], -1)
+        h = self.convnet(geo)
+#         h = h.view(h.shape[0], -1)
         return h
 
 
@@ -158,59 +160,99 @@ class Actor(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
-        self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-                                   nn.LayerNorm(feature_dim), nn.Tanh())
-#         self.policy = (
-#             enn.R2Conv(enn.FieldType(self.r2_rot, feature_dim * [self.r2_rot.regular_repr]), 
-#                        enn.FieldType(self.r2_rot, ))
-#         )
+#         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
+#                                    nn.LayerNorm(feature_dim), nn.Tanh())
+#         self.c4_act = gspaces.FlipRot2dOnR2(4)
+#         self.policy = enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr]), 
+#                                  enn.FieldType(self.c4_act, 1 * [self.c4_act.irrep(1, 2)]), 
+#                                  kernel_size=1, padding=0)
+        
 
-        self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
-                                    nn.ReLU(inplace=True),
-                                    nn.Linear(hidden_dim, hidden_dim),
-                                    nn.ReLU(inplace=True),
-                                    nn.Linear(hidden_dim, action_shape[0]))
+#         self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
+#                                     nn.ReLU(inplace=True),
+#                                     nn.Linear(hidden_dim, hidden_dim),
+#                                     nn.ReLU(inplace=True),
+#                                     nn.Linear(hidden_dim, action_shape[0]))
 
-        self.apply(utils.weight_init)
+#         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-        h = self.trunk(obs)
-
-        mu = self.policy(h)
+#         h = self.trunk(obs)
+        # observation should be a geometric tensor from encoder
+        mu = self.policy(obs).tensor.reshape(obs.shape[0], -1)
+        assert mu.shape[1:] == torch.Size([1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
         std = torch.ones_like(mu) * std
 
         dist = utils.TruncatedNormal(mu, std)
         return dist
 
+    def __getstate__(self):
+        """Overriden to handle not being able to pickle e2cnn network"""
+        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        return res
+
+    def _should_pickle(self, val):
+        return val != 'c4_act' and val != '_modules'
 
 class Critic(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
-        self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-                                   nn.LayerNorm(feature_dim), nn.Tanh())
+#         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
+#                                    nn.LayerNorm(feature_dim), nn.Tanh())
 
-        self.Q1 = nn.Sequential(
-            nn.Linear(feature_dim + action_shape[0], hidden_dim),
-            nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-
-        self.Q2 = nn.Sequential(
-            nn.Linear(feature_dim + action_shape[0], hidden_dim),
-            nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-
-        self.apply(utils.weight_init)
+#         self.Q1 = nn.Sequential(
+#             nn.Linear(feature_dim + action_shape[0], hidden_dim),
+#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
+# 
+#         self.Q2 = nn.Sequential(
+#             nn.Linear(feature_dim + action_shape[0], hidden_dim),
+#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
+#         self.c4_act = gspaces.FlipRot2dOnR2(4)
+#         self.repr_dim = repr_dim
+#         self.Q1 = nn.Sequential(
+#             enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]),
+#                        enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]),
+#                        kernel_size=1, padding=0),
+#             enn.ReLU(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]), inplace=True),
+#             enn.GroupPooling(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr])),
+#             enn.R2Conv(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.trivial_repr]),
+#                        enn.FieldType(self.c4_act, 1 * [self.c4_act.trivial_repr]),
+#                        kernel_size=1, padding=0)
+#         )
+#         self.Q2 = nn.Sequential(
+#             enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]),
+#                        enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]),
+#                        kernel_size=1, padding=0),
+#             enn.ReLU(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]), inplace=True),
+#             enn.GroupPooling(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr])),
+#             enn.R2Conv(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.trivial_repr]),
+#                        enn.FieldType(self.c4_act, 1 * [self.c4_act.trivial_repr]),
+#                        kernel_size=1, padding=0)
+#         )
+# 
+#         self.apply(utils.weight_init)
 
     def forward(self, obs, action):
-        h = self.trunk(obs)
-        h_action = torch.cat([h, action], dim=-1)
-        q1 = self.Q1(h_action)
-        q2 = self.Q2(h_action)
+        h_action = torch.cat([obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
+        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act, 
+                                                               self.repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]))
+        # reshape to 1 because single q value
+        q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
+        q2 = self.Q2(h_action).tensor.reshape(obs.shape[0], 1)
 
         return q1, q2
 
+    def __getstate__(self):
+        """Overriden to handle not being able to pickle e2cnn network"""
+        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        return res
+
+    def _should_pickle(self, val):
+        return val != 'c4_act' and val != '_modules'
 
 class DrQV2Agent:
     def __init__(self, obs_shape, action_shape, device, lr, feature_dim,
@@ -268,6 +310,51 @@ class DrQV2Agent:
     def save_enc(self, subdir):
         """Saves encoder weights to given directory"""
         torch.save(self.encoder.convnet.eval().state_dict(), subdir)
+
+    def save_actor(self, subdir):
+        """Saves actor weights to given directory"""
+        torch.save(self.actor.policy.eval().state_dict(), subdir)
+
+    def save_critic(self, subdirq1, subdirq2, subdirqT1, subdirqT2):
+        """Saves critic and critic target weights to given directory"""
+        torch.save(self.critic.Q1.eval().state_dict(), subdirq1)
+        torch.save(self.critic.Q2.eval().state_dict(), subdirq2)
+        torch.save(self.critic_target.Q1.eval().state_dict(), subdirqT1)
+        torch.save(self.critic_target.Q2.eval().state_dict(), subdirqT2)
+
+    def set_networks(group, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
+        """
+        Sets the network and group for encoder, agent, and critic for pickling purposes
+        MUST be called immediately after initialization
+        """
+        self.encoder.c4_act = group
+        self.actor.c4_act = group
+        self.critic.c4_act = group
+
+        # TODO manually set modules with orderdict, but pass in networks w params loaded already
+        odEnc = OrderedDict()
+        odEnc['convnet'] = encNet
+        self.encoder._modules = odEnc
+        self.encoder.convnet = encNet
+
+        odAct = OrderedDict()
+        odAct['policy'] = actNet
+        self.actor._modules = odAct
+        self.actor.policy = actNet
+
+        odCrit = OrderedDict()
+        odCrit['Q1'] = critQ1
+        odCrit['Q2'] = critQ2
+        self.critic._modules = odCrit
+        self.critic.Q1 = critQ1
+        self.critic.Q2 = critQ2
+
+        odCritTarg = OrderedDict()
+        odCritTarg['Q1'] = critQT1
+        odCritTarg['Q2'] = critQT2
+        self.critic_target._modules = odCritTarg
+        self.critic_target.Q1 = critQT1
+        self.critic_target.Q2 = critQT2
 
     def update_critic(self, obs, action, reward, discount, next_obs, step):
         metrics = dict()
@@ -348,10 +435,13 @@ class DrQV2Agent:
             self.update_critic(obs, action, reward, discount, next_obs, step))
 
         # update actor
-        metrics.update(self.update_actor(obs.detach(), step))
+        # TODO ask about detaching like this, bc don't packprop through encoder
+        obs = enn.GeometricTensor(obs.tensor.detach(), obs.type)
+        metrics.update(self.update_actor(obs, step))
 
         # update critic target
         utils.soft_update_params(self.critic, self.critic_target,
                                  self.critic_target_tau)
 
         return metrics
+
