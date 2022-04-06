@@ -2,6 +2,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from collections import OrderedDict
 import hydra
 import numpy as np
 import torch
@@ -55,9 +56,8 @@ class Encoder(nn.Module):
 #         self.repr_dim = 32 * 10 * 10
 
         # number of out channels
-        # TODO move this, but for now just change manually
-        n_out = 128
-        self.repr_dim = n_out
+        # n_out = 128
+        # self.repr_dim = n_out
 #         self.c4_act = gspaces.Rot2dOnR2(8)
 #         self.c4_act = gspaces.FlipRot2dOnR2(4)
 #         self.convnet = nn.Sequential(
@@ -69,7 +69,7 @@ class Encoder(nn.Module):
 #                     [self.c4_act.regular_repr]), inplace=True),
 #             enn.PointwiseMaxPool(enn.FieldType(
 #                 self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
-# 
+#
 #             enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
 #                       enn.FieldType(self.c4_act, n_out//4 * \
 #                                    [self.c4_act.regular_repr]),
@@ -78,8 +78,8 @@ class Encoder(nn.Module):
 #                     [self.c4_act.regular_repr]), inplace=True),
 #             enn.PointwiseMaxPool(enn.FieldType(
 #                 self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
-# 
-# 
+#
+#
 #             enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
 #                       enn.FieldType(self.c4_act, n_out//2 * \
 #                                    [self.c4_act.regular_repr]),
@@ -88,13 +88,13 @@ class Encoder(nn.Module):
 #                     [self.c4_act.regular_repr]), inplace=True),
 #             enn.PointwiseMaxPool(enn.FieldType(
 #                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-# 
+#
 #             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
 #                        enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
 #                        kernel_size=1),
 #             enn.ReLU(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
 #                        inplace=True)
-            # 16x16
+        # 16x16
 
 
 #             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
@@ -112,7 +112,7 @@ class Encoder(nn.Module):
 #                       kernel_size=3, padding=1),
 #             enn.ReLU(enn.FieldType(self.c4_act, n_out*2 * \
 #                     [self.c4_act.regular_repr]), inplace=True),
-# 
+#
 #             enn.R2Conv(enn.FieldType(self.c4_act, n_out*2 * [self.c4_act.regular_repr]),
 #                       enn.FieldType(self.c4_act, n_out * \
 #                                    [self.c4_act.regular_repr]),
@@ -140,7 +140,8 @@ class Encoder(nn.Module):
 
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
-        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        res = {k: v for (k, v) in self.__dict__.items()
+               if self._should_pickle(k)}
         return res
 
     def _should_pickle(self, val):
@@ -163,10 +164,10 @@ class Actor(nn.Module):
 #         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
 #                                    nn.LayerNorm(feature_dim), nn.Tanh())
 #         self.c4_act = gspaces.FlipRot2dOnR2(4)
-#         self.policy = enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr]), 
-#                                  enn.FieldType(self.c4_act, 1 * [self.c4_act.irrep(1, 2)]), 
+#         self.policy = enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr]),
+#                                  enn.FieldType(self.c4_act, 1 * [self.c4_act.irrep(1, 2)]),
 #                                  kernel_size=1, padding=0)
-        
+
 
 #         self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
 #                                     nn.ReLU(inplace=True),
@@ -177,10 +178,11 @@ class Actor(nn.Module):
 #         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-#         h = self.trunk(obs)
+        #         h = self.trunk(obs)
         # observation should be a geometric tensor from encoder
         mu = self.policy(obs).tensor.reshape(obs.shape[0], -1)
-        assert mu.shape[1:] == torch.Size([1]), f'Action output not correct shape: {mu.shape}'
+        assert mu.shape[1:] == torch.Size(
+            [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
         std = torch.ones_like(mu) * std
 
@@ -189,11 +191,13 @@ class Actor(nn.Module):
 
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
-        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        res = {k: v for (k, v) in self.__dict__.items()
+               if self._should_pickle(k)}
         return res
 
     def _should_pickle(self, val):
         return val != 'c4_act' and val != '_modules'
+
 
 class Critic(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
@@ -206,7 +210,7 @@ class Critic(nn.Module):
 #             nn.Linear(feature_dim + action_shape[0], hidden_dim),
 #             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
 #             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-# 
+#
 #         self.Q2 = nn.Sequential(
 #             nn.Linear(feature_dim + action_shape[0], hidden_dim),
 #             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
@@ -233,12 +237,13 @@ class Critic(nn.Module):
 #                        enn.FieldType(self.c4_act, 1 * [self.c4_act.trivial_repr]),
 #                        kernel_size=1, padding=0)
 #         )
-# 
+#
 #         self.apply(utils.weight_init)
 
     def forward(self, obs, action):
-        h_action = torch.cat([obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
-        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act, 
+        h_action = torch.cat(
+            [obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
+        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act,
                                                                self.repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]))
         # reshape to 1 because single q value
         q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
@@ -248,11 +253,13 @@ class Critic(nn.Module):
 
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
-        res = {k:v for (k, v) in self.__dict__.items() if self._should_pickle(k)}
+        res = {k: v for (k, v) in self.__dict__.items()
+               if self._should_pickle(k)}
         return res
 
     def _should_pickle(self, val):
         return val != 'c4_act' and val != '_modules'
+
 
 class DrQV2Agent:
     def __init__(self, obs_shape, action_shape, device, lr, feature_dim,
@@ -322,7 +329,7 @@ class DrQV2Agent:
         torch.save(self.critic_target.Q1.eval().state_dict(), subdirqT1)
         torch.save(self.critic_target.Q2.eval().state_dict(), subdirqT2)
 
-    def set_networks(group, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
+    def set_networks(self, group, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
         """
         Sets the network and group for encoder, agent, and critic for pickling purposes
         MUST be called immediately after initialization
@@ -444,4 +451,3 @@ class DrQV2Agent:
                                  self.critic_target_tau)
 
         return metrics
-
