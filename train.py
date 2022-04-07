@@ -7,6 +7,8 @@ from video import TrainVideoRecorder, VideoRecorder
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from logger import Logger
 import utils
+import os
+os.environ['MUJOCO_GL'] = 'egl'
 import dmc
 from dm_env import specs
 from e2cnn import gspaces
@@ -16,13 +18,11 @@ import torch
 import numpy as np
 import hydra
 from pathlib import Path
-import os
 from copy import deepcopy
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
-os.environ['MUJOCO_GL'] = 'egl'
 
 
 torch.backends.cudnn.benchmark = True
@@ -31,7 +31,7 @@ g = gspaces.FlipRot2dOnR2(4)
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 128
+    n_out = 64
     net = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
                    enn.FieldType(act, n_out//8 *
@@ -148,17 +148,21 @@ def make_agent(obs_spec, action_spec, cfg):
 
     # don't load weights because we're not loading from pickle, instead initialize
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
-    enc.repr_dim = repr_dim
-    act = act_net(enc.repr_dim, g, load_weights=False)
+    act = act_net(repr_dim, g, load_weights=False)
     q1, q2, qt1, qt2 = crit_net(
-        enc.repr_dim, cfg.action_shape, g, load_weights=False)
+        repr_dim, cfg.action_shape, g, load_weights=False)
     # set networks in agent
-    agent.set_networks(g, enc, act, q1, q2, qt1, qt2)
+    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2)
     agent.encoder.apply(utils.weight_init)
     agent.actor.apply(utils.weight_init)
     agent.critic.apply(utils.weight_init)
     agent.critic_target.apply(utils.weight_init)
     agent.critic_target.load_state_dict(agent.critic.state_dict())
+    agent.encoder_opt = torch.optim.Adam(agent.encoder.parameters(), lr=cfg.lr)
+    agent.actor_opt = torch.optim.Adam(agent.actor.parameters(), lr=cfg.lr)
+    agent.critic_opt = torch.optim.Adam(agent.critic.parameters(), lr=cfg.lr)
+    agent.train()
+    agent.critic_target.train()
 
     return agent
 
@@ -352,11 +356,11 @@ class Workspace:
         # load weights from pickle state dict
         obs_shape = self.train_env.observation_spec().shape
         action_shape = self.train_env.action_spec().shape
-        enc = enc_net(obs_shape, g, load_weights=True)
-        act = act_net(enc.repr_dim, g, load_weights=True)
+        enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
+        act = act_net(repr_dim, g, load_weights=True)
         q1, q2, qt1, qt2 = crit_net(
-            enc.repr_dim, action_shape, g, load_weights=True)
-        self.agent.set_networks(g, enc, act, q1, q2, qt1, qt2)
+            repr_dim, action_shape, g, load_weights=True)
+        self.agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2)
 
 
 @hydra.main(config_path='cfgs', config_name='config')

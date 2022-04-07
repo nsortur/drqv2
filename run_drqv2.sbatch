@@ -20,10 +20,10 @@
 export PYTHONPATH="/home/sortur.n/drqv2/"
 
 echo "node: $SLURM_NODELIST"
-task="task=acrobot_swingup"
+task=$TASK_MUJOCO
 # taken from shell script
 start_dirname=$START_DIRNAME
 
-python train.py +name=${start_dirname} ${task}
+python train.py +name=${start_dirname} task=${task}
 
 # TODO pids?

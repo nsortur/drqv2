@@ -1,6 +1,6 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="equi_actrep1"
-#export TASK_MUJOCO=acrobot_swingup
+jn="equi_irrep12_2"
+export TASK_MUJOCO=acrobot_swingup
 
 start_dir=${jn}
 script=run_drqv2.sbatch

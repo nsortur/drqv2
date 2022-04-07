@@ -54,6 +54,9 @@ class Encoder(nn.Module):
 
         assert len(obs_shape) == 3
 #         self.repr_dim = 32 * 10 * 10
+        self.repr_dim = None
+        self.c4_act = None
+        self.convnet = None
 
         # number of out channels
         # n_out = 128
@@ -161,6 +164,8 @@ class Actor(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
+        self.c4_act = None
+        self.policy = None
 #         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
 #                                    nn.LayerNorm(feature_dim), nn.Tanh())
 #         self.c4_act = gspaces.FlipRot2dOnR2(4)
@@ -203,6 +208,10 @@ class Critic(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
+        self.Q1 = None
+        self.Q2 = None
+        self.c4_act = None
+        self.repr_dim = None
 #         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
 #                                    nn.LayerNorm(feature_dim), nn.Tanh())
 
@@ -274,26 +283,28 @@ class DrQV2Agent:
         self.stddev_clip = stddev_clip
 
         # models
+        # parameters don't matter here, refactor later because instantiating
+        # in train class
         self.encoder = Encoder(obs_shape).to(device)
-        self.actor = Actor(self.encoder.repr_dim, action_shape, feature_dim,
+        self.actor = Actor(0, action_shape, feature_dim,
                            hidden_dim).to(device)
 
-        self.critic = Critic(self.encoder.repr_dim, action_shape, feature_dim,
+        self.critic = Critic(0, action_shape, feature_dim,
                              hidden_dim).to(device)
-        self.critic_target = Critic(self.encoder.repr_dim, action_shape,
+        self.critic_target = Critic(0, action_shape,
                                     feature_dim, hidden_dim).to(device)
-        self.critic_target.load_state_dict(self.critic.state_dict())
+#         self.critic_target.load_state_dict(self.critic.state_dict())
 
         # optimizers
-        self.encoder_opt = torch.optim.Adam(self.encoder.parameters(), lr=lr)
-        self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=lr)
-        self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=lr)
-
+#         self.encoder_opt = torch.optim.Adam(self.encoder.parameters(), lr=lr)
+#         self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=lr)
+#         self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=lr)
+# 
         # data augmentation
         self.aug = RandomShiftsAug(pad=4)
 
-        self.train()
-        self.critic_target.train()
+#         self.train()
+#         self.critic_target.train()
 
     def train(self, training=True):
         self.training = training
@@ -329,7 +340,7 @@ class DrQV2Agent:
         torch.save(self.critic_target.Q1.eval().state_dict(), subdirqT1)
         torch.save(self.critic_target.Q2.eval().state_dict(), subdirqT2)
 
-    def set_networks(self, group, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
+    def set_networks(self, group, repr_dim, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
         """
         Sets the network and group for encoder, agent, and critic for pickling purposes
         MUST be called immediately after initialization
@@ -337,6 +348,11 @@ class DrQV2Agent:
         self.encoder.c4_act = group
         self.actor.c4_act = group
         self.critic.c4_act = group
+        self.critic_target.c4_act = group
+
+        self.encoder.repr_dim = repr_dim
+        self.critic.repr_dim = repr_dim
+        self.critic_target.repr_dim = repr_dim
 
         # TODO manually set modules with orderdict, but pass in networks w params loaded already
         odEnc = OrderedDict()
