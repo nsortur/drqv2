@@ -155,8 +155,8 @@ class Encoder(nn.Module):
         obs = obs / 255.0 - 0.5
         geo = enn.GeometricTensor(obs, enn.FieldType(self.c4_act,
                                                      obs.shape[1] * [self.c4_act.trivial_repr]))
-        h = self.convnet(geo)
-#         h = h.view(h.shape[0], -1)
+        h = self.convnet(geo).tensor
+        h = h.view(h.shape[0], -1)
         return h
 
 
@@ -184,8 +184,7 @@ class Actor(nn.Module):
 
     def forward(self, obs, std):
         #         h = self.trunk(obs)
-        # observation should be a geometric tensor from encoder
-        mu = self.policy(obs).tensor.reshape(obs.shape[0], -1)
+        mu = self.policy(obs)
         assert mu.shape[1:] == torch.Size(
             [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
@@ -208,6 +207,7 @@ class Critic(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
+        self.trunk = None
         self.Q1 = None
         self.Q2 = None
         self.c4_act = None
@@ -250,14 +250,11 @@ class Critic(nn.Module):
 #         self.apply(utils.weight_init)
 
     def forward(self, obs, action):
-        h_action = torch.cat(
-            [obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
-        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act,
-                                                               self.repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]))
-        # reshape to 1 because single q value
-        q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
-        q2 = self.Q2(h_action).tensor.reshape(obs.shape[0], 1)
 
+        h = self.trunk(obs)
+        h_action = torch.cat([h, action], dim=-1)
+        q1 = self.Q1(h_action)
+        q2 = self.Q2(h_action)
         return q1, q2
 
     def __getstate__(self):
@@ -333,14 +330,16 @@ class DrQV2Agent:
         """Saves actor weights to given directory"""
         torch.save(self.actor.policy.eval().state_dict(), subdir)
 
-    def save_critic(self, subdirq1, subdirq2, subdirqT1, subdirqT2):
+    def save_critic(self, subdirq1, subdirq2, subdirqT1, subdirqT2, subdirqTrunk, subdirqTrunkTarg):
         """Saves critic and critic target weights to given directory"""
         torch.save(self.critic.Q1.eval().state_dict(), subdirq1)
         torch.save(self.critic.Q2.eval().state_dict(), subdirq2)
+        torch.save(self.critic.trunk.eval().state_dict(), subdirqTrunk)
         torch.save(self.critic_target.Q1.eval().state_dict(), subdirqT1)
         torch.save(self.critic_target.Q2.eval().state_dict(), subdirqT2)
+        torch.save(self.critic_target.trunk.eval().state_dict(), subdirqTrunkTarg)
 
-    def set_networks(self, group, repr_dim, encNet, actNet, critQ1, critQ2, critQT1, critQT2):
+    def set_networks(self, group, repr_dim, encNet, actNet, critQ1, critQ2, critQT1, critQT2, trunk, trunkT):
         """
         Sets the network and group for encoder, agent, and critic for pickling purposes
         MUST be called immediately after initialization
@@ -368,16 +367,20 @@ class DrQV2Agent:
         odCrit = OrderedDict()
         odCrit['Q1'] = critQ1
         odCrit['Q2'] = critQ2
+        odCrit['trunk'] = trunk
         self.critic._modules = odCrit
         self.critic.Q1 = critQ1
         self.critic.Q2 = critQ2
+        self.critic.trunk = trunk
 
         odCritTarg = OrderedDict()
         odCritTarg['Q1'] = critQT1
         odCritTarg['Q2'] = critQT2
+        odCritTarg['trunk'] = trunk
         self.critic_target._modules = odCritTarg
         self.critic_target.Q1 = critQT1
         self.critic_target.Q2 = critQT2
+        self.critic_target.trunk = trunkT
 
     def update_critic(self, obs, action, reward, discount, next_obs, step):
         metrics = dict()
@@ -459,8 +462,8 @@ class DrQV2Agent:
 
         # update actor
         # TODO ask about detaching like this, bc don't packprop through encoder
-        obs = enn.GeometricTensor(obs.tensor.detach(), obs.type)
-        metrics.update(self.update_actor(obs, step))
+#         obs = enn.GeometricTensor(obs.tensor.detach(), obs.type)
+        metrics.update(self.update_actor(obs.detach(), step))
 
         # update critic target
         utils.soft_update_params(self.critic, self.critic_target,

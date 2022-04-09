@@ -27,16 +27,16 @@ os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 
 torch.backends.cudnn.benchmark = True
 # group action acting on all networks
-g = gspaces.FlipRot2dOnR2(4)
+g = gspaces.Rot2dOnR2(8)
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 64
+    n_out = 128
     net = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
                    enn.FieldType(act, n_out//8 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//8 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
@@ -45,7 +45,7 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, n_out//8 * [act.regular_repr]),
                    enn.FieldType(act, n_out//4 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//4 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
@@ -55,33 +55,39 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, n_out//4 * [act.regular_repr]),
                    enn.FieldType(act, n_out//2 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//2 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
             act, n_out//2 * [act.regular_repr]), 2),
 
         enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
-                   enn.FieldType(act, n_out * [act.regular_repr]),
-                   kernel_size=1),
-        enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
-                 inplace=True)
+                   enn.FieldType(act, 32 * [act.trivial_repr]),
+                   kernel_size=1)
+#         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
+#                  inplace=True)
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         dict_ad = {k.replace('convnet.', ''): v for k, v in dict_init.items()}
         net.load_state_dict(dict_ad)
     net.to('cuda')
-    return net, n_out
+    return net, 3200
 
 
 def act_net(repr_dim, act, load_weights):
 
-    net = enn.R2Conv(
-        enn.FieldType(act, repr_dim * [act.regular_repr]),
-        enn.FieldType(act, 1 * [act.irrep(1, 2)]),
-        kernel_size=1, padding=0
-    )
+    # hardcoded from cfg to test backing up to only equi encoder
+    feature_dim = 50
+    hidden_dim = 1024
+    net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
+                        nn.LayerNorm(feature_dim),
+                        nn.Tanh(),
+                        nn.Linear(feature_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, 1))
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'actWeights.pt'))
         dict_ad = {k.replace('policy.', ''): v for k, v in dict_init.items()}
@@ -93,51 +99,56 @@ def act_net(repr_dim, act, load_weights):
 def crit_net(repr_dim, action_shape, act, load_weights):
     # TODO actually use action_shape?
     hidden_dim = 64
+    feature_dim = 50
     net1 = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr] + 1 * [act.irrep(1, 2)]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-                   enn.FieldType(act, 1 * [act.trivial_repr]),
-                   kernel_size=1, padding=0)
-    )
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
+
     net2 = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr] + 1 * [act.irrep(1, 2)]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-                   enn.FieldType(act, 1 * [act.trivial_repr]),
-                   kernel_size=1, padding=0)
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
+
+    trunk = nn.Sequential(
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh()
     )
+
     netT1 = deepcopy(net1)
     netT2 = deepcopy(net2)
+    netTtrunk = deepcopy(trunk)
     if load_weights:
         dict_init1 = torch.load(os.path.join(Path.cwd(), 'critWeights1.pt'))
         dict_init2 = torch.load(os.path.join(Path.cwd(), 'critWeights2.pt'))
+        dict_init_trunk = torch.load(os.path.join(Path.cwd(), 'critWeightsTrunk.pt'))
+
         dict_initT1 = torch.load(os.path.join(
             Path.cwd(), 'critTargWeights1.pt'))
         dict_initT2 = torch.load(os.path.join(
             Path.cwd(), 'critTargWeights2.pt'))
+        dict_initTtrunk = torch.load(os.path.join(
+            Path.cwd(), 'critTargWeightsTrunk.pt'))
         dict_ad1 = {k.replace('Q1.', ''): v for k, v in dict_init1.items()}
         dict_ad2 = {k.replace('Q2.', ''): v for k, v in dict_init2.items()}
+        dict_adTrunk = {k.replace('trunk.', ''): v for k, v in dict_init_trunk.items()}
         dict_adT1 = {k.replace('Q1.', ''): v for k, v in dict_initT1.items()}
         dict_adT2 = {k.replace('Q2.', ''): v for k, v in dict_initT2.items()}
+        dict_adTTrunk = {k.replace('trunk.', ''): v for k, v in dict_initTtrunk.items()}
         net1.load_state_dict(dict_ad1)
         net2.load_state_dict(dict_ad2)
+        trunk.load_state_dict(dict_adTrunk)
         netT1.load_state_dict(dict_adT1)
         netT2.load_state_dict(dict_adT2)
+        netTtrunk.load_state_dict(dict_adTTrunk)
 
     net1.to('cuda')
     net2.to('cuda')
+    trunk.to('cuda')
     netT1.to('cuda')
     netT2.to('cuda')
-    return net1, net2, netT1, netT2
+    netTtrunk.to('cuda')
+    return net1, net2, netT1, netT2, trunk, netTtrunk
 
 
 def make_agent(obs_spec, action_spec, cfg):
@@ -149,10 +160,10 @@ def make_agent(obs_spec, action_spec, cfg):
     # don't load weights because we're not loading from pickle, instead initialize
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
     act = act_net(repr_dim, g, load_weights=False)
-    q1, q2, qt1, qt2 = crit_net(
+    q1, q2, qt1, qt2, trunk, trunkT = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False)
     # set networks in agent
-    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2)
+    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
     agent.encoder.apply(utils.weight_init)
     agent.actor.apply(utils.weight_init)
     agent.critic.apply(utils.weight_init)
@@ -191,6 +202,9 @@ class Workspace:
         self.critic_weight_dir2 = "critWeights2.pt"
         self.criticT_weight_dir1 = "critTargWeights1.pt"
         self.criticT_weight_dir2 = "critTargWeights2.pt"
+
+        self.critic_weight_dirTrunk = "critWeightsTrunk.pt"
+        self.critic_weight_dirTrunkT = "critTargWeightsTrunk.pt"
 
     def setup(self):
         # create logger
@@ -343,7 +357,8 @@ class Workspace:
         self.agent.save_enc(self.enc_weight_dir)
         self.agent.save_actor(self.actor_weight_dir)
         self.agent.save_critic(self.critic_weight_dir1, self.critic_weight_dir2,
-                               self.criticT_weight_dir1, self.criticT_weight_dir2)
+                               self.criticT_weight_dir1, self.criticT_weight_dir2,
+                               self.critic_weight_dirTrunk, self.critic_weight_dirTrunkT)
 
     def load_snapshot(self):
         global g
@@ -358,9 +373,9 @@ class Workspace:
         action_shape = self.train_env.action_spec().shape
         enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
         act = act_net(repr_dim, g, load_weights=True)
-        q1, q2, qt1, qt2 = crit_net(
+        q1, q2, qt1, qt2, trunk, trunkT = crit_net(
             repr_dim, action_shape, g, load_weights=True)
-        self.agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2)
+        self.agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
 
 
 @hydra.main(config_path='cfgs', config_name='config')
