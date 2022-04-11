@@ -345,9 +345,9 @@ class DrQV2Agent:
         MUST be called immediately after initialization
         """
         self.encoder.c4_act = group
-        self.actor.c4_act = group
-        self.critic.c4_act = group
-        self.critic_target.c4_act = group
+#         self.actor.c4_act = group
+#         self.critic.c4_act = group
+#         self.critic_target.c4_act = group
 
         self.encoder.repr_dim = repr_dim
         self.critic.repr_dim = repr_dim
@@ -376,7 +376,7 @@ class DrQV2Agent:
         odCritTarg = OrderedDict()
         odCritTarg['Q1'] = critQT1
         odCritTarg['Q2'] = critQT2
-        odCritTarg['trunk'] = trunk
+        odCritTarg['trunk'] = trunkT
         self.critic_target._modules = odCritTarg
         self.critic_target.Q1 = critQT1
         self.critic_target.Q2 = critQT2
