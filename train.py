@@ -12,14 +12,14 @@ from torch import nn
 import e2cnn.nn as enn
 from e2cnn import gspaces
 from dm_env import specs
+import os
+os.environ['MUJOCO_GL'] = 'egl'
 import dmc
 from collections import OrderedDict
 from video import TrainVideoRecorder, VideoRecorder
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from logger import Logger
 import utils
-import os
-os.environ['MUJOCO_GL'] = 'egl'
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
