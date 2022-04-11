@@ -2,6 +2,17 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import warnings
+from copy import deepcopy
+from pathlib import Path
+import hydra
+import numpy as np
+import torch
+from torch import nn
+import e2cnn.nn as enn
+from e2cnn import gspaces
+from dm_env import specs
+import dmc
 from collections import OrderedDict
 from video import TrainVideoRecorder, VideoRecorder
 from replay_buffer import ReplayBufferStorage, make_replay_loader
@@ -9,17 +20,6 @@ from logger import Logger
 import utils
 import os
 os.environ['MUJOCO_GL'] = 'egl'
-import dmc
-from dm_env import specs
-from e2cnn import gspaces
-import e2cnn.nn as enn
-from torch import nn
-import torch
-import numpy as np
-import hydra
-from pathlib import Path
-from copy import deepcopy
-import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
@@ -64,13 +64,12 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
                    enn.FieldType(act, 32 * [act.trivial_repr]),
                    kernel_size=1)
-#         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
-#                  inplace=True)
+        #         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
+        #                  inplace=True)
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-#     net.to('cuda')
     return net, 3200
 
 
@@ -91,8 +90,9 @@ def act_net(repr_dim, act, load_weights):
         dict_init = torch.load(os.path.join(Path.cwd(), 'actWeights.pt'))
         net.load_state_dict(dict_init)
     return net
- 
-def crit_net(repr_dim, action_shape, act, load_weights):
+
+
+def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
     feature_dim = 50
     net1 = nn.Sequential(
@@ -100,64 +100,36 @@ def crit_net(repr_dim, action_shape, act, load_weights):
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
-    return net
-
-
-def crit_net(repr_dim, action_shape, act, load_weights):
-    # TODO actually use action_shape?
-    hidden_dim = 1024
-    feature_dim = 50
-    net1 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-
     net2 = nn.Sequential(
         nn.Linear(feature_dim + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+    )
     trunk = nn.Sequential(
         nn.Linear(repr_dim, feature_dim),
         nn.LayerNorm(feature_dim), nn.Tanh()
     )
-
-#     netT1 = deepcopy(net1)
-#     netT2 = deepcopy(net2)
-    netT1 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-
-    netT2 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-#     netTtrunk = deepcopy(trunk)
-    netTtrunk = nn.Sequential(
-        nn.Linear(repr_dim, feature_dim),
-        nn.LayerNorm(feature_dim), nn.Tanh()
-    )
     if load_weights:
-        dict_init1 = torch.load(os.path.join(Path.cwd(), 'critWeights1.pt'))
-        dict_init2 = torch.load(os.path.join(Path.cwd(), 'critWeights2.pt'))
-        dict_init_trunk = torch.load(os.path.join(Path.cwd(), 'critWeightsTrunk.pt'))
+        if target:
+            dict_init1 = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeights1.pt'))
+            dict_init2 = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeights2.pt'))
+            dict_init_trunk = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeightsTrunk.pt'))
+        else:
+            dict_init1 = torch.load(os.path.join(
+                Path.cwd(), 'critWeights1.pt'))
+            dict_init2 = torch.load(os.path.join(
+                Path.cwd(), 'critWeights2.pt'))
+            dict_init_trunk = torch.load(
+                os.path.join(Path.cwd(), 'critWeightsTrunk.pt'))
 
-        dict_initT1 = torch.load(os.path.join(
-            Path.cwd(), 'critTargWeights1.pt'))
-        dict_initT2 = torch.load(os.path.join(
-            Path.cwd(), 'critTargWeights2.pt'))
-        dict_initTtrunk = torch.load(os.path.join(
-            Path.cwd(), 'critTargWeightsTrunk.pt'))
-        dict_adTTrunk = dict_initTtrunk
         net1.load_state_dict(dict_init1)
         net2.load_state_dict(dict_init2)
         trunk.load_state_dict(dict_init_trunk)
-        netT1.load_state_dict(dict_initT1)
-        netT2.load_state_dict(dict_initT2)
-        netTtrunk.load_state_dict(dict_initTtrunk)
 
-    return net1, net2, netT1, netT2, trunk, netTtrunk
+    return net1, net2, trunk
 
 
 def make_agent(obs_spec, action_spec, cfg):
@@ -169,8 +141,11 @@ def make_agent(obs_spec, action_spec, cfg):
     # don't load weights because we're not loading from pickle, instead initialize
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
     act = act_net(repr_dim, g, load_weights=False)
-    q1, q2, qt1, qt2, trunk, trunkT = crit_net(
-        repr_dim, cfg.action_shape, g, load_weights=False)
+
+    q1, q2, trunk = crit_net(
+        repr_dim, cfg.action_shape, g, load_weights=False, target=False)
+    qt1, qt2, trunkT = crit_net(
+        repr_dim, cfg.action_shape, g, load_weights=False, target=True)
     # set networks in agent
     agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
     agent.encoder.apply(utils.weight_init)
@@ -388,13 +363,16 @@ class Workspace:
         action_shape = self.train_env.action_spec().shape
         enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
         act = act_net(repr_dim, g, load_weights=True)
-        q1, q2, qt1, qt2, trunk, trunkT = crit_net(
-            repr_dim, action_shape, g, load_weights=True)
-        self.agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
-        self.agent.encoder.to('cuda')
-        self.agent.actor.to('cuda')
-        self.agent.critic.to('cuda')
-        self.agent.critic_target.to('cuda')
+        q1, q2, trunk = crit_net(
+            repr_dim, action_shape, g, load_weights=True, target=False)
+        qt1, qt2, trunkT = crit_net(
+            repr_dim, action_shape, g, load_weights=True, target=True)
+        self.agent.set_networks(g, repr_dim, enc, act,
+                                q1, q2, qt1, qt2, trunk, trunkT)
+        self.agent.encoder.to(self.device)
+        self.agent.actor.to(self.device)
+        self.agent.critic.to(self.device)
+        self.agent.critic_target.to(self.device)
 
 
 @hydra.main(config_path='cfgs', config_name='config')
