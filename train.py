@@ -31,12 +31,12 @@ g = gspaces.Rot2dOnR2(8)
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 128
+    n_out = 200
     net = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
                    enn.FieldType(act, n_out//8 *
                                  [act.regular_repr]),
-                   kernel_size=3, padding=1),
+                   kernel_size=3, stride=2, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//8 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
@@ -45,7 +45,7 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, n_out//8 * [act.regular_repr]),
                    enn.FieldType(act, n_out//4 *
                                  [act.regular_repr]),
-                   kernel_size=3, padding=1),
+                   kernel_size=3, stride=2, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//4 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
@@ -55,22 +55,22 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, n_out//4 * [act.regular_repr]),
                    enn.FieldType(act, n_out//2 *
                                  [act.regular_repr]),
-                   kernel_size=3, padding=1),
+                   kernel_size=3, stride=2, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//2 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
             act, n_out//2 * [act.regular_repr]), 2),
 
         enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
-                   enn.FieldType(act, 32 * [act.trivial_repr]),
-                   kernel_size=1)
-        #         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
-        #                  inplace=True)
+                   enn.FieldType(act, n_out * [act.trivial_repr]),
+                   kernel_size=1),
+        enn.ReLU(enn.FieldType(act, n_out * [act.trivial_repr]),
+                 inplace=True)
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 3200
+    return net, n_out
 
 
 def act_net(repr_dim, act, load_weights):
