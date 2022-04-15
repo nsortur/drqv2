@@ -36,30 +36,30 @@ def enc_net(obs_shape, act, load_weights):
         enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
                    enn.FieldType(act, n_out//8 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3),
         enn.ReLU(enn.FieldType(act, n_out//8 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//8 * [act.regular_repr]), 2),
+            act, n_out//8 * [act.regular_repr]), 4),
 
         enn.R2Conv(enn.FieldType(act, n_out//8 * [act.regular_repr]),
                    enn.FieldType(act, n_out//4 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3),
         enn.ReLU(enn.FieldType(act, n_out//4 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//4 * [act.regular_repr]), 2),
+            act, n_out//4 * [act.regular_repr]), 4),
 
 
         enn.R2Conv(enn.FieldType(act, n_out//4 * [act.regular_repr]),
                    enn.FieldType(act, n_out//2 *
                                  [act.regular_repr]),
-                   kernel_size=3, stride=2, padding=1),
+                   kernel_size=3, padding=1),
         enn.ReLU(enn.FieldType(act, n_out//2 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//2 * [act.regular_repr]), 2),
+            act, n_out//2 * [act.regular_repr]), 3),
 
         enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
                    enn.FieldType(act, n_out * [act.trivial_repr]),
