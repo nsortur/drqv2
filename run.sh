@@ -1,5 +1,5 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="onlyequiencoder"
+jn="bigger_pool_no_pad"
 export TASK_MUJOCO=acrobot_swingup
 
 start_dir=${jn}
