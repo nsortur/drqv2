@@ -1,5 +1,5 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="onlyequiencoder"
+jn="irrep12_enc_512feat_dim"
 export TASK_MUJOCO=acrobot_swingup
 
 start_dir=${jn}

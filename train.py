@@ -27,7 +27,7 @@ os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 
 torch.backends.cudnn.benchmark = True
 # group action acting on all networks
-g = gspaces.Rot2dOnR2(8)
+g = gspaces.FlipRot2dOnR2(4)
 
 
 def enc_net(obs_shape, act, load_weights):
@@ -62,7 +62,7 @@ def enc_net(obs_shape, act, load_weights):
             act, n_out//2 * [act.regular_repr]), 2),
 
         enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
-                   enn.FieldType(act, 32 * [act.trivial_repr]),
+                   enn.FieldType(act, 64 * [act.irrep(1, 2)]),
                    kernel_size=1)
         #         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
         #                  inplace=True)
@@ -70,13 +70,13 @@ def enc_net(obs_shape, act, load_weights):
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 3200
+    return net, 6400
 
 
 def act_net(repr_dim, act, load_weights):
 
     # hardcoded from cfg to test backing up to only equi encoder
-    feature_dim = 50
+    feature_dim = 512
     hidden_dim = 1024
     net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
                         nn.LayerNorm(feature_dim),
@@ -94,7 +94,7 @@ def act_net(repr_dim, act, load_weights):
 
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
-    feature_dim = 50
+    feature_dim = 512
     net1 = nn.Sequential(
         nn.Linear(feature_dim + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
