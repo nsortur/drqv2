@@ -41,7 +41,7 @@ agent:
   update_every_steps: 2
   use_tb: ${use_tb}
   num_expl_steps: 2000
-  hidden_dim: 1024
+  hidden_dim: 256
   feature_dim: ${feature_dim}
   stddev_schedule: ${stddev_schedule}
   stddev_clip: 0.3

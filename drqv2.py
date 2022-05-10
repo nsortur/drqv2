@@ -52,7 +52,7 @@ class Encoder(nn.Module):
         super().__init__()
 
         assert len(obs_shape) == 3
-        self.repr_dim = 1024 * 1 * 1
+        self.repr_dim = 2048 * 1 * 1
 
         # number of out channels
         n_out = 128
@@ -117,7 +117,7 @@ class Encoder(nn.Module):
                                    [self.c4_act.regular_repr]), inplace=True),
             # 1x1
             enn.R2Conv(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-                       enn.FieldType(self.c4_act, 1024 * \
+                       enn.FieldType(self.c4_act, 2048 * \
                                      [self.c4_act.irrep(1)]),
                        kernel_size=1)
         )

@@ -1,4 +1,4 @@
-jn="irrep1_onlyenc"
+jn="irrep1_venc_256featdim"
 
 start_dir=${jn}
 script=run_drqv2.sbatch

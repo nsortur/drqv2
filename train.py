@@ -273,7 +273,7 @@ class Workspace:
                                    [c4_act.regular_repr]), inplace=True),
             # 1x1
             enn.R2Conv(enn.FieldType(c4_act, n_out * [c4_act.regular_repr]),
-                       enn.FieldType(c4_act, 1024 * [c4_act.irrep(1)]),
+                       enn.FieldType(c4_act, 2048 * [c4_act.irrep(1)]),
                        kernel_size=1)
         )
         dict_init = torch.load(self.enc_weight_dir)
