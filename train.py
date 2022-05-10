@@ -7,6 +7,8 @@ from video import TrainVideoRecorder, VideoRecorder
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from logger import Logger
 import utils
+import os
+os.environ['MUJOCO_GL'] = 'egl'
 import dmc
 from dm_env import specs
 from e2cnn import gspaces
@@ -16,12 +18,10 @@ import torch
 import numpy as np
 import hydra
 from pathlib import Path
-import os
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
-os.environ['MUJOCO_GL'] = 'egl'
 
 
 torch.backends.cudnn.benchmark = True

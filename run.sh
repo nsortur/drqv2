@@ -1,4 +1,4 @@
-jn="rot8_equi_2"
+jn="irrep1_onlyenc"
 
 start_dir=${jn}
 script=run_drqv2.sbatch
