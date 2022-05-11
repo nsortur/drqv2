@@ -2,6 +2,12 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import utils
+from logger import Logger
+from replay_buffer import ReplayBufferStorage, make_replay_loader
+from video import TrainVideoRecorder, VideoRecorder
+from collections import OrderedDict
+import dmc
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -14,12 +20,6 @@ from e2cnn import gspaces
 from dm_env import specs
 import os
 os.environ['MUJOCO_GL'] = 'egl'
-import dmc
-from collections import OrderedDict
-from video import TrainVideoRecorder, VideoRecorder
-from replay_buffer import ReplayBufferStorage, make_replay_loader
-from logger import Logger
-import utils
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
@@ -27,50 +27,78 @@ os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 
 torch.backends.cudnn.benchmark = True
 # group action acting on all networks
-g = gspaces.Rot2dOnR2(8)
+g = gspaces.Flip2dOnR2()
 
 
 def enc_net(obs_shape, act, load_weights):
     n_out = 128
+    chan_up = n_out // 6
     net = nn.Sequential(
+        # 84x84
         enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
-                   enn.FieldType(act, n_out//8 *
+                   enn.FieldType(act, chan_up*1 *
                                  [act.regular_repr]),
                    kernel_size=3, padding=1),
-        enn.ReLU(enn.FieldType(act, n_out//8 *
+        enn.ReLU(enn.FieldType(act, chan_up*1 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//8 * [act.regular_repr]), 2),
+            act, chan_up*1 * [act.regular_repr]), 2),
 
-        enn.R2Conv(enn.FieldType(act, n_out//8 * [act.regular_repr]),
-                   enn.FieldType(act, n_out//4 *
+        # 42x42
+        enn.R2Conv(enn.FieldType(act, chan_up*1 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*2 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, chan_up*2 *
+                               [act.regular_repr]), inplace=True),
+        enn.PointwiseMaxPool(enn.FieldType(
+            act, chan_up*2 * [act.regular_repr]), 2),
+
+        # 20x20
+        enn.R2Conv(enn.FieldType(act, chan_up*2 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*3 *
                                  [act.regular_repr]),
                    kernel_size=3, padding=1),
-        enn.ReLU(enn.FieldType(act, n_out//4 *
+        enn.ReLU(enn.FieldType(act, chan_up*3 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//4 * [act.regular_repr]), 2),
+            act, chan_up*3 * [act.regular_repr]), 2),
 
-
-        enn.R2Conv(enn.FieldType(act, n_out//4 * [act.regular_repr]),
-                   enn.FieldType(act, n_out//2 *
+        # 10x10
+        enn.R2Conv(enn.FieldType(act, chan_up*3 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*4 *
                                  [act.regular_repr]),
                    kernel_size=3, padding=1),
-        enn.ReLU(enn.FieldType(act, n_out//2 *
+        enn.ReLU(enn.FieldType(act, chan_up*4 *
                                [act.regular_repr]), inplace=True),
         enn.PointwiseMaxPool(enn.FieldType(
-            act, n_out//2 * [act.regular_repr]), 2),
+            act, chan_up*4 * [act.regular_repr]), 2),
 
-        enn.R2Conv(enn.FieldType(act, n_out//2 * [act.regular_repr]),
-                   enn.FieldType(act, 32 * [act.trivial_repr]),
+        # 5x5
+        enn.R2Conv(enn.FieldType(act, chan_up*4 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*5 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, chan_up*5 *
+                               [act.regular_repr]), inplace=True),
+
+        # 3x3
+        enn.R2Conv(enn.FieldType(act, chan_up*5 * [act.regular_repr]),
+                   enn.FieldType(act, n_out *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, n_out *
+                               [act.regular_repr]), inplace=True),
+        # 1x1
+        enn.R2Conv(enn.FieldType(act, n_out * [act.regular_repr]),
+                   enn.FieldType(act, 1024 * \
+                                 [act.irrep(1)]),
                    kernel_size=1)
-        #         enn.ReLU(enn.FieldType(act, n_out * [act.regular_repr]),
-        #                  inplace=True)
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 3200
+    return net, 1024
 
 
 def act_net(repr_dim, act, load_weights):
