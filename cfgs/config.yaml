@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - task@_global_: quadruped_walk
+  - task@_global_: cup_catch
   - override hydra/launcher: submitit_local
 
 # task settings
@@ -13,7 +13,7 @@ num_seed_frames: 4000
 eval_every_frames: 10000
 num_eval_episodes: 10
 # snapshot
-save_snapshot: false
+save_snapshot: true
 # replay buffer
 replay_buffer_size: 1000000
 replay_buffer_num_workers: 4
@@ -48,7 +48,8 @@ agent:
 
 hydra:
   run:
-    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+#     dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: ./exp_local/${hydra.job.override_dirname}
   sweep:
     dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${agent_cfg.experiment}
     subdir: ${hydra.job.num}
