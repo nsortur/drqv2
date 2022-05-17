@@ -2,33 +2,198 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import warnings
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-
-import os
-os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
-os.environ['MUJOCO_GL'] = 'egl'
-
-from pathlib import Path
-
-import hydra
-import numpy as np
-import torch
-from dm_env import specs
-
-import dmc
 import utils
 from logger import Logger
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from video import TrainVideoRecorder, VideoRecorder
+from collections import OrderedDict
+import dmc
+import warnings
+from copy import deepcopy
+from pathlib import Path
+import hydra
+import numpy as np
+import torch
+from torch import nn
+import e2cnn.nn as enn
+from e2cnn import gspaces
+from dm_env import specs
+import os
+os.environ['MUJOCO_GL'] = 'egl'
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
+
 
 torch.backends.cudnn.benchmark = True
+# group action acting on all networks
+g = gspaces.Flip2dOnR2()
+
+
+def enc_net(obs_shape, act, load_weights):
+    n_out = 128
+    chan_up = n_out // 6
+    net = nn.Sequential(
+        # 84x84
+        enn.R2Conv(enn.FieldType(act, obs_shape[0] * [act.trivial_repr]),
+                   enn.FieldType(act, chan_up*1 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=1),
+        enn.ReLU(enn.FieldType(act, chan_up*1 *
+                               [act.regular_repr]), inplace=True),
+        enn.PointwiseMaxPool(enn.FieldType(
+            act, chan_up*1 * [act.regular_repr]), 2),
+
+        # 42x42
+        enn.R2Conv(enn.FieldType(act, chan_up*1 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*2 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, chan_up*2 *
+                               [act.regular_repr]), inplace=True),
+        enn.PointwiseMaxPool(enn.FieldType(
+            act, chan_up*2 * [act.regular_repr]), 2),
+
+        # 20x20
+        enn.R2Conv(enn.FieldType(act, chan_up*2 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*3 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=1),
+        enn.ReLU(enn.FieldType(act, chan_up*3 *
+                               [act.regular_repr]), inplace=True),
+        enn.PointwiseMaxPool(enn.FieldType(
+            act, chan_up*3 * [act.regular_repr]), 2),
+
+        # 10x10
+        enn.R2Conv(enn.FieldType(act, chan_up*3 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*4 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=1),
+        enn.ReLU(enn.FieldType(act, chan_up*4 *
+                               [act.regular_repr]), inplace=True),
+        enn.PointwiseMaxPool(enn.FieldType(
+            act, chan_up*4 * [act.regular_repr]), 2),
+
+        # 5x5
+        enn.R2Conv(enn.FieldType(act, chan_up*4 * [act.regular_repr]),
+                   enn.FieldType(act, chan_up*5 *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, chan_up*5 *
+                               [act.regular_repr]), inplace=True),
+
+        # 3x3
+        enn.R2Conv(enn.FieldType(act, chan_up*5 * [act.regular_repr]),
+                   enn.FieldType(act, n_out *
+                                 [act.regular_repr]),
+                   kernel_size=3, padding=0),
+        enn.ReLU(enn.FieldType(act, n_out *
+                               [act.regular_repr]), inplace=True),
+        # 1x1
+        enn.R2Conv(enn.FieldType(act, n_out * [act.regular_repr]),
+                   enn.FieldType(act, 1024 * \
+                                 [act.irrep(1)]),
+                   kernel_size=1)
+    )
+    if load_weights:
+        dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
+        net.load_state_dict(dict_init)
+    return net, 1024
+
+
+def act_net(repr_dim, act, load_weights):
+
+    # hardcoded from cfg to test backing up to only equi encoder
+    feature_dim = 50
+    hidden_dim = 1024
+    net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
+                        nn.LayerNorm(feature_dim),
+                        nn.Tanh(),
+                        nn.Linear(feature_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, 1))
+    if load_weights:
+        dict_init = torch.load(os.path.join(Path.cwd(), 'actWeights.pt'))
+        net.load_state_dict(dict_init)
+    return net
+
+
+def crit_net(repr_dim, action_shape, act, load_weights, target):
+    hidden_dim = 1024
+    feature_dim = 50
+    net1 = nn.Sequential(
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+    )
+    net2 = nn.Sequential(
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+    )
+    trunk = nn.Sequential(
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh()
+    )
+    if load_weights:
+        if target:
+            dict_init1 = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeights1.pt'))
+            dict_init2 = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeights2.pt'))
+            dict_init_trunk = torch.load(os.path.join(
+                Path.cwd(), 'critTargWeightsTrunk.pt'))
+        else:
+            dict_init1 = torch.load(os.path.join(
+                Path.cwd(), 'critWeights1.pt'))
+            dict_init2 = torch.load(os.path.join(
+                Path.cwd(), 'critWeights2.pt'))
+            dict_init_trunk = torch.load(
+                os.path.join(Path.cwd(), 'critWeightsTrunk.pt'))
+
+        net1.load_state_dict(dict_init1)
+        net2.load_state_dict(dict_init2)
+        trunk.load_state_dict(dict_init_trunk)
+
+    return net1, net2, trunk
 
 
 def make_agent(obs_spec, action_spec, cfg):
+    global g
     cfg.obs_shape = obs_spec.shape
     cfg.action_shape = action_spec.shape
-    return hydra.utils.instantiate(cfg)
+    agent = hydra.utils.instantiate(cfg)
+
+    # don't load weights because we're not loading from pickle, instead initialize
+    enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
+    act = act_net(repr_dim, g, load_weights=False)
+
+    q1, q2, trunk = crit_net(
+        repr_dim, cfg.action_shape, g, load_weights=False, target=False)
+    qt1, qt2, trunkT = crit_net(
+        repr_dim, cfg.action_shape, g, load_weights=False, target=True)
+    # set networks in agent
+    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
+    agent.encoder.apply(utils.weight_init)
+    agent.actor.apply(utils.weight_init)
+    agent.critic.apply(utils.weight_init)
+    agent.critic_target.apply(utils.weight_init)
+
+    agent.encoder.to('cuda')
+    agent.actor.to('cuda')
+    agent.critic.to('cuda')
+    agent.critic_target.to('cuda')
+
+    agent.critic_target.load_state_dict(agent.critic.state_dict())
+    agent.encoder_opt = torch.optim.Adam(agent.encoder.parameters(), lr=cfg.lr)
+    agent.actor_opt = torch.optim.Adam(agent.actor.parameters(), lr=cfg.lr)
+    agent.critic_opt = torch.optim.Adam(agent.critic.parameters(), lr=cfg.lr)
+    agent.train()
+    agent.critic_target.train()
+
+    return agent
 
 
 class Workspace:
@@ -47,6 +212,17 @@ class Workspace:
         self.timer = utils.Timer()
         self._global_step = 0
         self._global_episode = 0
+
+        # files to save e2cnn network weights because they're unpicklable
+        self.enc_weight_dir = "encWeights.pt"
+        self.actor_weight_dir = "actWeights.pt"
+        self.critic_weight_dir1 = "critWeights1.pt"
+        self.critic_weight_dir2 = "critWeights2.pt"
+        self.criticT_weight_dir1 = "critTargWeights1.pt"
+        self.criticT_weight_dir2 = "critTargWeights2.pt"
+
+        self.critic_weight_dirTrunk = "critWeightsTrunk.pt"
+        self.critic_weight_dirTrunkT = "critTargWeightsTrunk.pt"
 
     def setup(self):
         # create logger
@@ -75,7 +251,6 @@ class Workspace:
             self.work_dir if self.cfg.save_video else None)
         self.train_video_recorder = TrainVideoRecorder(
             self.work_dir if self.cfg.save_train_video else None)
-
 
     @property
     def global_step(self):
@@ -138,7 +313,9 @@ class Workspace:
         while train_until_step(self.global_step):
             if time_step.last():
                 self._global_episode += 1
-                self.train_video_recorder.save(f'{self.global_frame}.mp4')
+                if self.global_frame % 100000 == 0:
+                    # save vid every 100k frames instead of every 10k
+                    self.train_video_recorder.save(f'{self.global_frame}.mp4')
                 # wait until all the metrics schema is populated
                 if metrics is not None:
                     # log stats
@@ -195,19 +372,42 @@ class Workspace:
         payload = {k: self.__dict__[k] for k in keys_to_save}
         with snapshot.open('wb') as f:
             torch.save(payload, f)
+        self.agent.save_enc(self.enc_weight_dir)
+        self.agent.save_actor(self.actor_weight_dir)
+        self.agent.save_critic(self.critic_weight_dir1, self.critic_weight_dir2,
+                               self.criticT_weight_dir1, self.criticT_weight_dir2,
+                               self.critic_weight_dirTrunk, self.critic_weight_dirTrunkT)
 
     def load_snapshot(self):
+        global g
         snapshot = self.work_dir / 'snapshot.pt'
         with snapshot.open('rb') as f:
             payload = torch.load(f)
         for k, v in payload.items():
             self.__dict__[k] = v
 
+        # load weights from pickle state dict
+        obs_shape = self.train_env.observation_spec().shape
+        action_shape = self.train_env.action_spec().shape
+        enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
+        act = act_net(repr_dim, g, load_weights=True)
+        q1, q2, trunk = crit_net(
+            repr_dim, action_shape, g, load_weights=True, target=False)
+        qt1, qt2, trunkT = crit_net(
+            repr_dim, action_shape, g, load_weights=True, target=True)
+        self.agent.set_networks(g, repr_dim, enc, act,
+                                q1, q2, qt1, qt2, trunk, trunkT)
+        self.agent.encoder.to(self.device)
+        self.agent.actor.to(self.device)
+        self.agent.critic.to(self.device)
+        self.agent.critic_target.to(self.device)
+
 
 @hydra.main(config_path='cfgs', config_name='config')
 def main(cfg):
     from train import Workspace as W
     root_dir = Path.cwd()
+    print('root:', root_dir)
     workspace = W(cfg)
     snapshot = root_dir / 'snapshot.pt'
     if snapshot.exists():
