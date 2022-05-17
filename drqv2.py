@@ -58,89 +58,6 @@ class Encoder(nn.Module):
         self.c4_act = None
         self.convnet = None
 
-        # number of out channels
-        # n_out = 128
-        # self.repr_dim = n_out
-#         self.c4_act = gspaces.Rot2dOnR2(8)
-#         self.c4_act = gspaces.FlipRot2dOnR2(4)
-#         self.convnet = nn.Sequential(
-#             enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
-#                       enn.FieldType(self.c4_act, n_out//8 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//8 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out//4 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//4 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
-#
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out//2 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//2 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-#                        enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                        kernel_size=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                        inplace=True)
-        # 16x16
-
-
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out * [self.c4_act.regular_repr]), 2),
-# 8x8
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out*2 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out*2 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out*2 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out * [self.c4_act.regular_repr]), 2),
-# 3x3
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-# 1x1
-#         )
-#         self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0], 32, 3, stride=2),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU())
-
-#         self.apply(utils.weight_init)
-
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
         res = {k: v for (k, v) in self.__dict__.items()
@@ -173,7 +90,6 @@ class Actor(nn.Module):
 #                                  enn.FieldType(self.c4_act, 1 * [self.c4_act.irrep(1, 2)]),
 #                                  kernel_size=1, padding=0)
 
-
 #         self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
 #                                     nn.ReLU(inplace=True),
 #                                     nn.Linear(hidden_dim, hidden_dim),
@@ -181,6 +97,7 @@ class Actor(nn.Module):
 #                                     nn.Linear(hidden_dim, action_shape[0]))
 
 #         self.apply(utils.weight_init)
+
 
     def forward(self, obs, std):
         #         h = self.trunk(obs)
