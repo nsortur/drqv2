@@ -58,89 +58,6 @@ class Encoder(nn.Module):
         self.c4_act = None
         self.convnet = None
 
-        # number of out channels
-        # n_out = 128
-        # self.repr_dim = n_out
-#         self.c4_act = gspaces.Rot2dOnR2(8)
-#         self.c4_act = gspaces.FlipRot2dOnR2(4)
-#         self.convnet = nn.Sequential(
-#             enn.R2Conv(enn.FieldType(self.c4_act, obs_shape[0] * [self.c4_act.trivial_repr]),
-#                       enn.FieldType(self.c4_act, n_out//8 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//8 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//8 * [self.c4_act.regular_repr]), 2),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//8 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out//4 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//4 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//4 * [self.c4_act.regular_repr]), 2),
-#
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//4 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out//2 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, stride=2, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out//2 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out//2 * [self.c4_act.regular_repr]), 2),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-#                        enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                        kernel_size=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                        inplace=True)
-        # 16x16
-
-
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out//2 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out * [self.c4_act.regular_repr]), 2),
-# 8x8
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out*2 * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=1),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out*2 * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out*2 * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-#             enn.PointwiseMaxPool(enn.FieldType(
-#                 self.c4_act, n_out * [self.c4_act.regular_repr]), 2),
-# 3x3
-#             enn.R2Conv(enn.FieldType(self.c4_act, n_out * [self.c4_act.regular_repr]),
-#                       enn.FieldType(self.c4_act, n_out * \
-#                                    [self.c4_act.regular_repr]),
-#                       kernel_size=3, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, n_out * \
-#                     [self.c4_act.regular_repr]), inplace=True),
-# 1x1
-#         )
-#         self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0], 32, 3, stride=2),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
-#                                      nn.ReLU())
-
-#         self.apply(utils.weight_init)
-
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
         res = {k: v for (k, v) in self.__dict__.items()
@@ -155,8 +72,8 @@ class Encoder(nn.Module):
         obs = obs / 255.0 - 0.5
         geo = enn.GeometricTensor(obs, enn.FieldType(self.c4_act,
                                                      obs.shape[1] * [self.c4_act.trivial_repr]))
-        h = self.convnet(geo).tensor
-        h = h.view(h.shape[0], -1)
+        h = self.convnet(geo)
+#         h = h.view(h.shape[0], -1)
         return h
 
 
@@ -184,7 +101,7 @@ class Actor(nn.Module):
 
     def forward(self, obs, std):
         #         h = self.trunk(obs)
-        mu = self.policy(obs)
+        mu = self.policy(obs).tensor.reshape(obs.shape[0], -1)
         assert mu.shape[1:] == torch.Size(
             [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
@@ -252,13 +169,14 @@ class Critic(nn.Module):
 
     def forward(self, obs, action):
 
-        h = self.trunk(obs)
-        h_action = torch.cat(
-            [h.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
-        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act,
-                                                               self.repr_dim * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
-        q1 = self.Q1(h_action).tensor
-        q2 = self.Q2(h_action).tensor
+        obs_action = torch.cat(
+            [obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
+        obs_action = enn.GeometricTensor(
+            obs_action, enn.FieldType(self.c4_act,
+                                    self.repr_dim * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+        h_action = self.trunk(obs_action)
+        q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
+        q2 = self.Q2(h_action).tensor.reshape(obs.shape[0], 1)
         return q1, q2
 
     def __getstate__(self):
@@ -350,9 +268,9 @@ class DrQV2Agent:
         MUST be called immediately after initialization
         """
         self.encoder.c4_act = group
-#         self.actor.c4_act = group
-#         self.critic.c4_act = group
-#         self.critic_target.c4_act = group
+        self.actor.c4_act = group
+        self.critic.c4_act = group
+        self.critic_target.c4_act = group
 
         self.encoder.repr_dim = repr_dim
         self.critic.repr_dim = repr_dim
