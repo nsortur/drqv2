@@ -2,24 +2,25 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from dm_env import specs
+from e2cnn import gspaces
+import e2cnn.nn as enn
+from torch import nn
+import torch
+import numpy as np
+import hydra
+from pathlib import Path
+from copy import deepcopy
+import warnings
+import dmc
 import utils
 from logger import Logger
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from video import TrainVideoRecorder, VideoRecorder
 from collections import OrderedDict
-import dmc
-import warnings
-from copy import deepcopy
-from pathlib import Path
-import hydra
-import numpy as np
-import torch
-from torch import nn
-import e2cnn.nn as enn
-from e2cnn import gspaces
-from dm_env import specs
 import os
 os.environ['MUJOCO_GL'] = 'egl'
+
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
@@ -101,19 +102,31 @@ def enc_net(obs_shape, act, load_weights):
     return net, 1024
 
 
-def act_net(repr_dim, act, load_weights):
+def act_net(repr_dim, action_shape, act, load_weights):
 
     # hardcoded from cfg to test backing up to only equi encoder
     feature_dim = 50
-    hidden_dim = 1024
-    net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-                        nn.LayerNorm(feature_dim),
-                        nn.Tanh(),
-                        nn.Linear(feature_dim, hidden_dim),
-                        nn.ReLU(inplace=True),
-                        nn.Linear(hidden_dim, hidden_dim),
-                        nn.ReLU(inplace=True),
-                        nn.Linear(hidden_dim, 1))
+    hidden_dim = 512
+    net = nn.Sequential(
+        enn.R2Conv(
+            enn.FieldType(act, repr_dim * [act.regular_repr]),
+            enn.FieldType(act, feature_dim * [act.regular_repr]),
+            kernel_size=1, padding=0
+        ),
+        enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
+        enn.R2Conv(
+            enn.FieldType(act, feature_dim * [act.regular_repr]),
+            enn.FieldType(act, hidden_dim * [act.regular_repr]),
+            kernel_size=1, padding=0
+        ),
+        enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+        enn.R2Conv(
+            enn.FieldType(act, hidden_dim * [act.regular_repr]),
+            enn.FieldType(act, action_shape[0] * [act.irrep(1)]),
+            kernel_size=1, padding=0
+        ),
+    )
+
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'actWeights.pt'))
         net.load_state_dict(dict_init)
@@ -124,18 +137,32 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
     feature_dim = 50
     net1 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   enn.FieldType(act, 1 * [act.irrep(1)]),
+                   kernel_size=1, padding=0)
     )
     net2 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   enn.FieldType(act, 1 * [act.irrep(1)]),
+                   kernel_size=1, padding=0)
     )
     trunk = nn.Sequential(
-        nn.Linear(repr_dim, feature_dim),
-        nn.LayerNorm(feature_dim), nn.Tanh()
+        enn.R2Conv(
+            enn.FieldType(act, repr_dim * [act.regular_repr]),
+            enn.FieldType(act, feature_dim * [act.regular_repr]),
+            kernel_size=1, padding=0
+        ),
+        enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
     )
     if load_weights:
         if target:
@@ -168,7 +195,7 @@ def make_agent(obs_spec, action_spec, cfg):
 
     # don't load weights because we're not loading from pickle, instead initialize
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
-    act = act_net(repr_dim, g, load_weights=False)
+    act = act_net(repr_dim, cfg.action_shape, g, load_weights=False)
 
     q1, q2, trunk = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False, target=False)
@@ -390,7 +417,7 @@ class Workspace:
         obs_shape = self.train_env.observation_spec().shape
         action_shape = self.train_env.action_spec().shape
         enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
-        act = act_net(repr_dim, g, load_weights=True)
+        act = act_net(repr_dim, action_shape, g, load_weights=True)
         q1, q2, trunk = crit_net(
             repr_dim, action_shape, g, load_weights=True, target=False)
         qt1, qt2, trunkT = crit_net(

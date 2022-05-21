@@ -207,6 +207,7 @@ class Critic(nn.Module):
     def __init__(self, repr_dim, action_shape, feature_dim, hidden_dim):
         super().__init__()
 
+        self.action_shape = action_shape
         self.trunk = None
         self.Q1 = None
         self.Q2 = None
@@ -252,9 +253,12 @@ class Critic(nn.Module):
     def forward(self, obs, action):
 
         h = self.trunk(obs)
-        h_action = torch.cat([h, action], dim=-1)
-        q1 = self.Q1(h_action)
-        q2 = self.Q2(h_action)
+        h_action = torch.cat(
+            [h.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
+        h_action = enn.GeometricTensor(h_action, enn.FieldType(self.c4_act,
+                                                               self.repr_dim * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+        q1 = self.Q1(h_action).tensor
+        q2 = self.Q2(h_action).tensor
         return q1, q2
 
     def __getstate__(self):
@@ -296,7 +300,7 @@ class DrQV2Agent:
 #         self.encoder_opt = torch.optim.Adam(self.encoder.parameters(), lr=lr)
 #         self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=lr)
 #         self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=lr)
-# 
+#
         # data augmentation
         self.aug = RandomShiftsAug(pad=4)
 
@@ -337,7 +341,8 @@ class DrQV2Agent:
         torch.save(self.critic.trunk.eval().state_dict(), subdirqTrunk)
         torch.save(self.critic_target.Q1.eval().state_dict(), subdirqT1)
         torch.save(self.critic_target.Q2.eval().state_dict(), subdirqT2)
-        torch.save(self.critic_target.trunk.eval().state_dict(), subdirqTrunkTarg)
+        torch.save(self.critic_target.trunk.eval(
+        ).state_dict(), subdirqTrunkTarg)
 
     def set_networks(self, group, repr_dim, encNet, actNet, critQ1, critQ2, critQT1, critQT2, trunk, trunkT):
         """
@@ -462,8 +467,8 @@ class DrQV2Agent:
 
         # update actor
         # TODO ask about detaching like this, bc don't packprop through encoder
-#         obs = enn.GeometricTensor(obs.tensor.detach(), obs.type)
-        metrics.update(self.update_actor(obs.detach(), step))
+        obs = enn.GeometricTensor(obs.tensor.detach(), obs.type)
+        metrics.update(self.update_actor(obs, step))
 
         # update critic target
         utils.soft_update_params(self.critic, self.critic_target,
