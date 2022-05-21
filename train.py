@@ -119,6 +119,12 @@ def act_net(repr_dim, action_shape, act, load_weights):
         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
         enn.R2Conv(
             enn.FieldType(act, hidden_dim * [act.regular_repr]),
+            enn.FieldType(act, hidden_dim * [act.regular_repr]),
+            kernel_size=1, padding=0
+        ),
+        enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+        enn.R2Conv(
+            enn.FieldType(act, hidden_dim * [act.regular_repr]),
             enn.FieldType(act, action_shape[0] * [act.irrep(1)]),
             kernel_size=1, padding=0
         ),
@@ -139,6 +145,11 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
                    kernel_size=1, padding=0),
         enn.ReLU(enn.FieldType(act, hidden_dim *
                  [act.regular_repr]), inplace=True),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
         enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
                    enn.FieldType(act, 1 * [act.trivial_repr]),
@@ -146,6 +157,11 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
     )
     net2 = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
                    kernel_size=1, padding=0),
         enn.ReLU(enn.FieldType(act, hidden_dim *
