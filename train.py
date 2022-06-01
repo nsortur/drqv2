@@ -85,17 +85,17 @@ def enc_net(obs_shape, act, load_weights):
 
         # 3x3
         enn.R2Conv(enn.FieldType(act, chan_up*5 * [act.regular_repr]),
-                   enn.FieldType(act, 512 *
+                   enn.FieldType(act, 1024 *
                                  [act.regular_repr]),
                    kernel_size=3, padding=0),
-        enn.ReLU(enn.FieldType(act, 512 *
+        enn.ReLU(enn.FieldType(act, 1024 *
                                [act.regular_repr]), inplace=True),
         # 1x1
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 512
+    return net, 1024
 
 
 def act_net(repr_dim, action_shape, act, load_weights):
@@ -139,46 +139,66 @@ def act_net(repr_dim, action_shape, act, load_weights):
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
     feature_dim = 50
+#     net1 = nn.Sequential(
+#         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr]),
+#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    kernel_size=1, padding=0),
+#         enn.ReLU(enn.FieldType(act, hidden_dim *
+#                  [act.regular_repr]), inplace=True),
+#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    kernel_size=1, padding=0),
+#         enn.ReLU(enn.FieldType(act, hidden_dim *
+#                  [act.regular_repr]), inplace=True),
+#         enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
+#                    enn.FieldType(act, 1 * [act.trivial_repr]),
+#                    kernel_size=1, padding=0)
+#     )
     net1 = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-                   enn.FieldType(act, 1 * [act.trivial_repr]),
-                   kernel_size=1, padding=0)
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh(),
+        nn.Linear(feature_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
+#     net2 = nn.Sequential(
+#         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr]),
+#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    kernel_size=1, padding=0),
+#         enn.ReLU(enn.FieldType(act, hidden_dim *
+#                  [act.regular_repr]), inplace=True),
+#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
+#                    kernel_size=1, padding=0),
+#         enn.ReLU(enn.FieldType(act, hidden_dim *
+#                  [act.regular_repr]), inplace=True),
+#         enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
+#                    enn.FieldType(act, 1 * [act.trivial_repr]),
+#                    kernel_size=1, padding=0)
+#     )
     net2 = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
-                   kernel_size=1, padding=0),
-        enn.ReLU(enn.FieldType(act, hidden_dim *
-                 [act.regular_repr]), inplace=True),
-        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-                   enn.FieldType(act, 1 * [act.trivial_repr]),
-                   kernel_size=1, padding=0)
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh(),
+        nn.Linear(feature_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
+#     trunk = nn.Sequential(
+#         enn.R2Conv(
+#             enn.FieldType(act, repr_dim * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
+#             enn.FieldType(act, feature_dim * [act.regular_repr]),
+#             kernel_size=1, padding=0
+#         ),
+#         enn.InnerBatchNorm(enn.FieldType(act, feature_dim * [act.regular_repr])),
+#         enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
+#     )
     trunk = nn.Sequential(
-        enn.R2Conv(
-            enn.FieldType(act, repr_dim * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
-            enn.FieldType(act, feature_dim * [act.regular_repr]),
-            kernel_size=1, padding=0
-        ),
-        enn.InnerBatchNorm(enn.FieldType(act, feature_dim * [act.regular_repr])),
-        enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
+        enn.R2Conv(enn.FieldType(act, 1024 * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
+                   enn.FieldType(act, 1024 * \
+                                 [act.irrep(1)]),
+                   kernel_size=1),
     )
     if load_weights:
         if target:

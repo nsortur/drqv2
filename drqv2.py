@@ -174,9 +174,10 @@ class Critic(nn.Module):
         obs_action = enn.GeometricTensor(
             obs_action, enn.FieldType(self.c4_act,
                                     self.repr_dim * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
-        h_action = self.trunk(obs_action)
-        q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
-        q2 = self.Q2(h_action).tensor.reshape(obs.shape[0], 1)
+        h_action = self.trunk(obs_action).tensor
+        h_action = h_action.view(h_action.shape[0], -1)
+        q1 = self.Q1(h_action)#.tensor.reshape(obs.shape[0], 1)
+        q2 = self.Q2(h_action)#.tensor.reshape(obs.shape[0], 1)
         return q1, q2
 
     def __getstate__(self):
