@@ -156,9 +156,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #                    kernel_size=1, padding=0)
 #     )
     net1 = nn.Sequential(
-        nn.Linear(repr_dim, feature_dim),
-        nn.LayerNorm(feature_dim), nn.Tanh(),
-        nn.Linear(feature_dim, hidden_dim),
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
@@ -179,9 +177,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #                    kernel_size=1, padding=0)
 #     )
     net2 = nn.Sequential(
-        nn.Linear(repr_dim, feature_dim),
-        nn.LayerNorm(feature_dim), nn.Tanh(),
-        nn.Linear(feature_dim, hidden_dim),
+        nn.Linear(feature_dim + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
@@ -195,10 +191,14 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #         enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
 #     )
     trunk = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, 1024 * [act.regular_repr] + action_shape[0] * [act.irrep(1)]),
+        enn.R2Conv(enn.FieldType(act, 1024 * [act.regular_repr]),
                    enn.FieldType(act, 1024 * \
                                  [act.irrep(1)]),
                    kernel_size=1),
+    )
+    trunk2 = nn.Sequential( 
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh()
     )
     if load_weights:
         if target:
@@ -220,7 +220,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
         net2.load_state_dict(dict_init2)
         trunk.load_state_dict(dict_init_trunk)
 
-    return net1, net2, trunk
+    return net1, net2, trunk, trunk2
 
 
 def make_agent(obs_spec, action_spec, cfg):
@@ -233,12 +233,12 @@ def make_agent(obs_spec, action_spec, cfg):
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
     act = act_net(repr_dim, cfg.action_shape, g, load_weights=False)
 
-    q1, q2, trunk = crit_net(
+    q1, q2, trunk, trunk2 = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False, target=False)
-    qt1, qt2, trunkT = crit_net(
+    qt1, qt2, trunkT, trunk2T = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False, target=True)
     # set networks in agent
-    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT)
+    agent.set_networks(g, repr_dim, enc, act, q1, q2, qt1, qt2, trunk, trunkT, trunk2, trunk2T)
     agent.encoder.apply(utils.weight_init)
     agent.actor.apply(utils.weight_init)
     agent.critic.apply(utils.weight_init)
