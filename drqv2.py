@@ -83,6 +83,7 @@ class Actor(nn.Module):
 
         self.c4_act = None
         self.policy = None
+        self.trunk = None
 #         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
 #                                    nn.LayerNorm(feature_dim), nn.Tanh())
 #         self.c4_act = gspaces.FlipRot2dOnR2(4)
@@ -100,8 +101,8 @@ class Actor(nn.Module):
 #         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-        #         h = self.trunk(obs)
-        mu = self.policy(obs).tensor.reshape(obs.shape[0], -1)
+        h = self.trunk(obs).tensor.view(obs.shape[0], -1)
+        mu = self.policy(h)
         assert mu.shape[1:] == torch.Size(
             [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
@@ -169,14 +170,15 @@ class Critic(nn.Module):
 
     def forward(self, obs, action):
 
+        h = self.trunk(obs).tensor
+        h = h.view(h.shape[0], -1)
         obs_action = torch.cat(
-            [obs.tensor, action.unsqueeze(2).unsqueeze(3)], dim=1)
+            [h, action], dim=1).unsqueeze(2).unsqueeze(3)
         obs_action = enn.GeometricTensor(
             obs_action, enn.FieldType(self.c4_act,
-                                    self.repr_dim * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
-        h_action = self.trunk(obs_action)
-        q1 = self.Q1(h_action).tensor.reshape(obs.shape[0], 1)
-        q2 = self.Q2(h_action).tensor.reshape(obs.shape[0], 1)
+                                    1024 * [self.c4_act.irrep(1)] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+        q1 = self.Q1(obs_action).tensor.reshape(obs.shape[0], 1)
+        q2 = self.Q2(obs_action).tensor.reshape(obs.shape[0], 1)
         return q1, q2
 
     def __getstate__(self):
@@ -262,7 +264,7 @@ class DrQV2Agent:
         torch.save(self.critic_target.trunk.eval(
         ).state_dict(), subdirqTrunkTarg)
 
-    def set_networks(self, group, repr_dim, encNet, actNet, critQ1, critQ2, critQT1, critQT2, trunk, trunkT):
+    def set_networks(self, group, repr_dim, encNet, actNet, actTrunk, critQ1, critQ2, critQT1, critQT2, trunk, trunkT):
         """
         Sets the network and group for encoder, agent, and critic for pickling purposes
         MUST be called immediately after initialization
@@ -284,8 +286,10 @@ class DrQV2Agent:
 
         odAct = OrderedDict()
         odAct['policy'] = actNet
+        odAct['trunk'] = actTrunk
         self.actor._modules = odAct
         self.actor.policy = actNet
+        self.actor.trunk = actTrunk
 
         odCrit = OrderedDict()
         odCrit['Q1'] = critQ1

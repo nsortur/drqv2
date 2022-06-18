@@ -1,6 +1,6 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="onlyequiencoder"
-export TASK_MUJOCO=acrobot_swingup
+jn="invcritic_mlpactor"
+export TASK_MUJOCO=cartpole_swingup
 
 start_dir=${jn}
 script=run_drqv2.sbatch
