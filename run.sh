@@ -1,5 +1,5 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="invcritic_mlpactor"
+jn="invcritic_mlpactor_try1_trivaction"
 export TASK_MUJOCO=cartpole_swingup
 
 start_dir=${jn}

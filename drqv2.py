@@ -127,6 +127,7 @@ class Critic(nn.Module):
 
         self.action_shape = action_shape
         self.trunk = None
+        self.trunk2 = None
         self.Q1 = None
         self.Q2 = None
         self.c4_act = None
@@ -176,10 +177,17 @@ class Critic(nn.Module):
             [h, action], dim=1).unsqueeze(2).unsqueeze(3)
         obs_action = enn.GeometricTensor(
             obs_action, enn.FieldType(self.c4_act,
-                                    1024 * [self.c4_act.irrep(1)] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+                                    1024 * [self.c4_act.irrep(1)] + self.action_shape[0] * [self.c4_act.trivial_repr]))
+        # TODO try trivial for action
         q1 = self.Q1(obs_action).tensor.reshape(obs.shape[0], 1)
         q2 = self.Q2(obs_action).tensor.reshape(obs.shape[0], 1)
         return q1, q2
+#         h = self.trunk(obs).tensor
+#         h2 = h.view(h.shape[0], -1)
+#         h_action = torch.cat([h2, action], dim=-1)
+#         q1 = self.Q1(h_action)
+#         q2 = self.Q2(h_action)
+#         return q1, q2
 
     def __getstate__(self):
         """Overriden to handle not being able to pickle e2cnn network"""
@@ -253,6 +261,7 @@ class DrQV2Agent:
     def save_actor(self, subdir):
         """Saves actor weights to given directory"""
         torch.save(self.actor.policy.eval().state_dict(), subdir)
+        torch.save(self.actor.trunk.eval().state_dict(), 'actWeightsTrunk.pt')
 
     def save_critic(self, subdirq1, subdirq2, subdirqT1, subdirqT2, subdirqTrunk, subdirqTrunkTarg):
         """Saves critic and critic target weights to given directory"""
@@ -264,7 +273,7 @@ class DrQV2Agent:
         torch.save(self.critic_target.trunk.eval(
         ).state_dict(), subdirqTrunkTarg)
 
-    def set_networks(self, group, repr_dim, encNet, actNet, actTrunk, critQ1, critQ2, critQT1, critQT2, trunk, trunkT):
+    def set_networks(self, group, repr_dim, encNet, actNet, actTrunk, critQ1, critQ2, critQT1, critQT2, trunk, trunkT, trunk2, trunkT2):
         """
         Sets the network and group for encoder, agent, and critic for pickling purposes
         MUST be called immediately after initialization
@@ -295,19 +304,23 @@ class DrQV2Agent:
         odCrit['Q1'] = critQ1
         odCrit['Q2'] = critQ2
         odCrit['trunk'] = trunk
+        odCrit['trunk2'] = trunk2
         self.critic._modules = odCrit
         self.critic.Q1 = critQ1
         self.critic.Q2 = critQ2
         self.critic.trunk = trunk
+        self.critic.trunk2 = trunk2
 
         odCritTarg = OrderedDict()
         odCritTarg['Q1'] = critQT1
         odCritTarg['Q2'] = critQT2
         odCritTarg['trunk'] = trunkT
+        odCritTarg['trunk2'] = trunkT2
         self.critic_target._modules = odCritTarg
         self.critic_target.Q1 = critQT1
         self.critic_target.Q2 = critQT2
         self.critic_target.trunk = trunkT
+        self.critic_target.trunk2 = trunkT2
 
     def update_critic(self, obs, action, reward, discount, next_obs, step):
         metrics = dict()
