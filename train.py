@@ -32,7 +32,7 @@ g = gspaces.Flip2dOnR2()
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 256
+    n_out = 512
     chan_up = n_out // 6
     net = nn.Sequential(
         # 84x84
@@ -95,7 +95,7 @@ def enc_net(obs_shape, act, load_weights):
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 256
+    return net, 512
 
 
 def act_net(repr_dim, action_shape, act, load_weights):
@@ -118,10 +118,15 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #         ),
 #         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
         enn.R2Conv(
+            enn.FieldType(act, feature_dim * [act.irrep(1)]),
+            enn.FieldType(act, hidden_dim * [act.irrep(1)]),
+            kernel_size=1, padding=0
+        ),
+        enn.R2Conv(
             enn.FieldType(act, hidden_dim * [act.irrep(1)]),
             enn.FieldType(act, 1 * [act.irrep(1)]),
             kernel_size=1, padding=0
-        ),
+        )
 #         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
 #         enn.R2Conv(
 #             enn.FieldType(act, hidden_dim * [act.regular_repr]),
@@ -140,7 +145,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 
     trunk = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.irrep(1)]),
+                   enn.FieldType(act, feature_dim * [act.irrep(1)]),
                    kernel_size=1)
     )
 
