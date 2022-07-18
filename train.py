@@ -119,7 +119,12 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
         enn.R2Conv(
             enn.FieldType(act, hidden_dim * [act.irrep(1)]),
-            enn.FieldType(act, 1 * [act.irrep(1)]),
+            enn.FieldType(act, hidden_dim * [act.irrep(1)]),
+            kernel_size=1, padding=0
+        ),
+        enn.R2Conv(
+            enn.FieldType(act, hidden_dim * [act.irrep(1)]),
+            enn.FieldType(act, action_shape[0] * [act.irrep(1)]),
             kernel_size=1, padding=0
         ),
 #         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
