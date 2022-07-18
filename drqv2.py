@@ -104,9 +104,9 @@ class Actor(nn.Module):
 #         obs_t = np.tanh(obs) TODO tanh observation
 #                           TODO change trunk output to regular
         h = self.trunk(obs)#.tensor.view(obs.shape[0], -1)
-        h = torch.tanh(h.tensor)
-        h = enn.GeometricTensor(h, enn.FieldType(self.c4_act,
-                                              1024 * [self.c4_act.irrep(1)]))
+#         h = torch.tanh(h.tensor)
+#         h = enn.GeometricTensor(h, enn.FieldType(self.c4_act,
+#                                               1024 * [self.c4_act.irrep(1)]))
         mu = self.policy(h).tensor.view(obs.shape[0], -1)
         assert mu.shape[1:] == torch.Size(
             [1]), f'Action output not correct shape: {mu.shape}'
@@ -176,7 +176,7 @@ class Critic(nn.Module):
     def forward(self, obs, action):
 
         h = self.trunk(obs).tensor
-        h = torch.tanh(h)
+#         h = torch.tanh(h)
         h = h.view(h.shape[0], -1)
         obs_action = torch.cat(
             [h, action], dim=1)#.unsqueeze(2).unsqueeze(3)
