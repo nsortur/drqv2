@@ -32,7 +32,7 @@ g = gspaces.Flip2dOnR2()
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 256
+    n_out = 128
     chan_up = n_out // 6
     net = nn.Sequential(
         # 84x84
@@ -91,11 +91,16 @@ def enc_net(obs_shape, act, load_weights):
         enn.ReLU(enn.FieldType(act, n_out *
                                [act.regular_repr]), inplace=True),
         # 1x1
+        enn.R2Conv(enn.FieldType(act, n_out * [act.regular_repr]),
+                   enn.FieldType(act, 1024 *
+                                 [act.regular_repr]),
+                   kernel_size=1),
+        
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 256
+    return net, 1024
 
 
 def act_net(repr_dim, action_shape, act, load_weights):

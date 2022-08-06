@@ -101,7 +101,6 @@ class Actor(nn.Module):
 #         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-#         obs_t = np.tanh(obs) TODO tanh observation
 #                           TODO change trunk output to regular
         h = self.trunk(obs)#.tensor.view(obs.shape[0], -1)
         h = torch.tanh(h.tensor)
