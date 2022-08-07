@@ -157,7 +157,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
-    feature_dim = 50
+    feature_dim = 128
 #     net1 = nn.Sequential(
 #         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]+ action_shape[0] * [act.irrep(1)]),
 #                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
@@ -365,7 +365,8 @@ class Workspace:
                 step += 1
 
             episode += 1
-            self.video_recorder.save(f'{self.global_frame}.mp4')
+            if self.global_frame % 150000 == 0:
+                self.video_recorder.save(f'{self.global_frame}.mp4')
 
         with self.logger.log_and_dump_ctx(self.global_frame, ty='eval') as log:
             log('episode_reward', total_reward / episode)
@@ -390,9 +391,6 @@ class Workspace:
         while train_until_step(self.global_step):
             if time_step.last():
                 self._global_episode += 1
-#                 if self.global_frame % 100000 == 0:
-                    # save vid every 100k frames instead of every 10k
-#                     self.train_video_recorder.save(f'{self.global_frame}.mp4')
                 # wait until all the metrics schema is populated
                 if metrics is not None:
                     # log stats
