@@ -106,7 +106,7 @@ def enc_net(obs_shape, act, load_weights):
 def act_net(repr_dim, action_shape, act, load_weights):
 
     # hardcoded from cfg to test backing up to only equi encoder
-    feature_dim = 50
+    feature_dim = 128
     hidden_dim = 1024
     net = nn.Sequential(
 #         enn.R2Conv(
@@ -116,12 +116,12 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #         ),
 #         enn.InnerBatchNorm(enn.FieldType(act, feature_dim * [act.regular_repr])),
 #         enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
-#         enn.R2Conv(
-#             enn.FieldType(act, feature_dim * [act.regular_repr]),
-#             enn.FieldType(act, hidden_dim * [act.regular_repr]),
-#             kernel_size=1, padding=0
-#         ),
-#         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+        enn.R2Conv(
+            enn.FieldType(act, feature_dim * [act.regular_repr]),
+            enn.FieldType(act, hidden_dim * [act.regular_repr]),
+            kernel_size=1, padding=0
+        ),
+        enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
         enn.R2Conv(
             enn.FieldType(act, hidden_dim * [act.irrep(1)]),
             enn.FieldType(act, 1 * [act.irrep(1)]),
@@ -145,7 +145,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 
     trunk = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-                   enn.FieldType(act, hidden_dim * [act.irrep(1)]),
+                   enn.FieldType(act, feature_dim * [act.irrep(1)]),
                    kernel_size=1)
     )
 
