@@ -32,7 +32,7 @@ g = gspaces.Flip2dOnR2()
 
 
 def enc_net(obs_shape, act, load_weights):
-    n_out = 128
+    n_out = 256
     chan_up = n_out // 6
     net = nn.Sequential(
         # 84x84
@@ -390,9 +390,9 @@ class Workspace:
         while train_until_step(self.global_step):
             if time_step.last():
                 self._global_episode += 1
-                if self.global_frame % 100000 == 0:
+#                 if self.global_frame % 100000 == 0:
                     # save vid every 100k frames instead of every 10k
-                    self.train_video_recorder.save(f'{self.global_frame}.mp4')
+#                     self.train_video_recorder.save(f'{self.global_frame}.mp4')
                 # wait until all the metrics schema is populated
                 if metrics is not None:
                     # log stats
