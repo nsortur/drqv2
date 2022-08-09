@@ -10,6 +10,7 @@ import torch
 import numpy as np
 import hydra
 from pathlib import Path
+import cv2
 from copy import deepcopy
 import warnings
 import os
@@ -351,8 +352,22 @@ class Workspace:
             time_step = self.eval_env.reset()
             self.video_recorder.init(self.eval_env, enabled=(episode == 0))
             while not time_step.last():
+                lower = np.array([10, 100, 20], dtype= "uint8")
+                upper = np.array([25, 255, 255], dtype= "uint8")
+                obs_mask = None 
+                for i in range(self.cfg.frame_stack):
+                    stack = cv2.cvtColor(time_step.observation[3*i:3*i+3].transpose(1, 2, 0), cv2.COLOR_RGB2HSV)
+                    orange_mask = cv2.inRange(stack, lower, upper)
+                    image_arr = cv2.bitwise_and(stack, 
+                                                stack, mask=orange_mask)
+                    mask_stack = cv2.cvtColor(image_arr, cv2.COLOR_HSV2RGB).transpose(2, 0, 1)
+                    if i == 0:
+                        obs_mask = mask_stack
+                    else:
+                        obs_mask = np.concatenate((obs_mask, mask_stack), axis=0)
+
                 with torch.no_grad(), utils.eval_mode(self.agent):
-                    action = self.agent.act(time_step.observation,
+                    action = self.agent.act(obs_mask,
                                             self.global_step,
                                             eval_mode=True)
                 time_step = self.eval_env.step(action)
@@ -361,7 +376,7 @@ class Workspace:
                 step += 1
 
             episode += 1
-            if self.global_frame % 150000 == 0:
+            if self.global_frame % 50000 == 0:
                 self.video_recorder.save(f'{self.global_frame}.mp4')
 
         with self.logger.log_and_dump_ctx(self.global_frame, ty='eval') as log:
@@ -385,6 +400,21 @@ class Workspace:
         self.train_video_recorder.init(time_step.observation)
         metrics = None
         while train_until_step(self.global_step):
+            # add mask
+            lower = np.array([10, 100, 20], dtype= "uint8")
+            upper = np.array([25, 255, 255], dtype= "uint8")
+            obs_mask = None
+            for i in range(self.cfg.frame_stack):
+                stack = cv2.cvtColor(time_step.observation[3*i:3*i+3].transpose(1, 2, 0), cv2.COLOR_RGB2HSV)
+                orange_mask = cv2.inRange(stack, lower, upper)
+                image_arr = cv2.bitwise_and(stack, 
+                                            stack, mask=orange_mask)
+                mask_stack = cv2.cvtColor(image_arr, cv2.COLOR_HSV2RGB).transpose(2, 0, 1)
+                if i == 0:
+                    obs_mask = mask_stack
+                else:
+                    obs_mask = np.concatenate((obs_mask, mask_stack), axis=0)
+
             if time_step.last():
                 self._global_episode += 1
                 # wait until all the metrics schema is populated
@@ -405,7 +435,7 @@ class Workspace:
                 # reset env
                 time_step = self.train_env.reset()
                 self.replay_storage.add(time_step)
-                self.train_video_recorder.init(time_step.observation)
+                self.train_video_recorder.init(obs_mask)
                 # try to save snapshot
                 if self.cfg.save_snapshot:
                     self.save_snapshot()
@@ -420,7 +450,7 @@ class Workspace:
 
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
-                action = self.agent.act(time_step.observation,
+                action = self.agent.act(obs_mask,
                                         self.global_step,
                                         eval_mode=False)
 
@@ -433,7 +463,7 @@ class Workspace:
             time_step = self.train_env.step(action)
             episode_reward += time_step.reward
             self.replay_storage.add(time_step)
-            self.train_video_recorder.record(time_step.observation)
+            self.train_video_recorder.record(obs_mask)
             episode_step += 1
             self._global_step += 1
 
