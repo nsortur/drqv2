@@ -32,7 +32,15 @@ class VideoRecorder:
                                            camera_id=0)
             else:
                 frame = env.render()
-            self.frames.append(frame)
+
+            lower = np.array([10, 100, 20], dtype= "uint8")
+            upper = np.array([25, 255, 255], dtype= "uint8")
+            stack = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+            orange_mask = cv2.inRange(stack, lower, upper)
+            image_arr = cv2.bitwise_and(stack, 
+                                        stack, mask=orange_mask)
+            mask_stack = cv2.cvtColor(image_arr, cv2.COLOR_HSV2RGB)
+            self.frames.append(mask_stack)
 
     def save(self, file_name):
         if self.enabled:
