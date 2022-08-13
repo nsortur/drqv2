@@ -93,7 +93,7 @@ def enc_net(obs_shape, act, load_weights):
         # 1x1
         enn.R2Conv(enn.FieldType(act, n_out * [act.regular_repr]),
                    enn.FieldType(act, 1024 *
-                                 [act.regular_repr]),
+                                 [act.irrep(1)]),
                    kernel_size=1),
         
     )
@@ -108,32 +108,19 @@ def act_net(repr_dim, action_shape, act, load_weights):
     # hardcoded from cfg to test backing up to only equi encoder
     feature_dim = 256
     hidden_dim = 1024
-    net = nn.Sequential(
+#     net = nn.Sequential(
 #         enn.R2Conv(
-#             enn.FieldType(act, repr_dim * [act.regular_repr]),
 #             enn.FieldType(act, feature_dim * [act.regular_repr]),
+#             enn.FieldType(act, hidden_dim * [act.regular_repr]),
 #             kernel_size=1, padding=0
 #         ),
-#         enn.InnerBatchNorm(enn.FieldType(act, feature_dim * [act.regular_repr])),
-#         enn.ReLU(enn.FieldType(act, feature_dim * [act.regular_repr])),
-        enn.R2Conv(
-            enn.FieldType(act, feature_dim * [act.regular_repr]),
-            enn.FieldType(act, hidden_dim * [act.regular_repr]),
-            kernel_size=1, padding=0
-        ),
-        enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-        enn.R2Conv(
-            enn.FieldType(act, hidden_dim * [act.regular_repr]),
-            enn.FieldType(act, 1 * [act.irrep(1)]),
-            kernel_size=1, padding=0
-        ),
 #         enn.ReLU(enn.FieldType(act, hidden_dim * [act.regular_repr])),
 #         enn.R2Conv(
 #             enn.FieldType(act, hidden_dim * [act.regular_repr]),
-#             enn.FieldType(act, action_shape[0] * [act.irrep(1)]),
+#             enn.FieldType(act, 1 * [act.irrep(1)]),
 #             kernel_size=1, padding=0
 #         ),
-    )
+#     )
 #     net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
 #                         nn.LayerNorm(feature_dim),
 #                         nn.Tanh(),
@@ -142,11 +129,19 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #                         nn.Linear(hidden_dim, hidden_dim),
 #                         nn.ReLU(inplace=True),
 #                         nn.Linear(hidden_dim, 1))
+    net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
+                        nn.LayerNorm(feature_dim),
+                        nn.Tanh(),
+                        nn.Linear(feature_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(hidden_dim, 1))
 
     trunk = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-                   enn.FieldType(act, feature_dim * [act.regular_repr]),
-                   kernel_size=1)
+#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
+#                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
+#                    kernel_size=1)
     )
 
     if load_weights:
@@ -157,7 +152,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
-    feature_dim = 50
+    feature_dim = 256
 #     net1 = nn.Sequential(
 #         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]+ action_shape[0] * [act.irrep(1)]),
 #                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
@@ -210,7 +205,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
     trunk = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
+        enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
                    kernel_size=1)
     )

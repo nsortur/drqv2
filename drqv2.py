@@ -102,11 +102,11 @@ class Actor(nn.Module):
 
     def forward(self, obs, std):
 #                           TODO change trunk output to regular
-        h = self.trunk(obs)#.tensor.view(obs.shape[0], -1)
-        h = torch.tanh(h.tensor)
-        h = enn.GeometricTensor(h, enn.FieldType(self.c4_act,
-                                              256 * [self.c4_act.regular_repr]))
-        mu = self.policy(h).tensor.view(obs.shape[0], -1)
+#         h = self.trunk(obs).tensor.view(obs.shape[0], -1)
+#         h = torch.tanh(h.tensor)
+#         h = enn.GeometricTensor(h, enn.FieldType(self.c4_act,
+#                                               256 * [self.c4_act.regular_repr]))
+        mu = self.policy(obs.tensor.view(obs.shape[0], -1))#.tensor.view(obs.shape[0], -1)
         assert mu.shape[1:] == torch.Size(
             [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
