@@ -106,7 +106,7 @@ def enc_net(obs_shape, act, load_weights):
 def act_net(repr_dim, action_shape, act, load_weights):
 
     # hardcoded from cfg to test backing up to only equi encoder
-    feature_dim = 256
+    feature_dim = 50
     hidden_dim = 1024
 #     net = nn.Sequential(
 #         enn.R2Conv(
@@ -205,9 +205,11 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
     trunk = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
-                   enn.FieldType(act, feature_dim * [act.irrep(1)]),
-                   kernel_size=1)
+#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
+#                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
+#                    kernel_size=1)
+        nn.Linear(repr_dim, feature_dim),
+        nn.LayerNorm(feature_dim), nn.Tanh()
     )
     if load_weights:
         if target:
