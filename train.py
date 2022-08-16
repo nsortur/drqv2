@@ -130,8 +130,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #                         nn.ReLU(inplace=True),
 #                         nn.Linear(hidden_dim, 1))
     net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-                        nn.LayerNorm(feature_dim),
-                        nn.Tanh(),
+#                         nn.Tanh(),
                         nn.Linear(feature_dim, hidden_dim),
                         nn.ReLU(inplace=True),
                         nn.Linear(hidden_dim, hidden_dim),
@@ -209,7 +208,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
 #                    kernel_size=1)
         nn.Linear(repr_dim, feature_dim),
-        nn.LayerNorm(feature_dim), nn.Tanh()
+#         nn.Tanh()
     )
     if load_weights:
         if target:
