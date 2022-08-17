@@ -129,18 +129,19 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #                         nn.Linear(hidden_dim, hidden_dim),
 #                         nn.ReLU(inplace=True),
 #                         nn.Linear(hidden_dim, 1))
-    net = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-#                         nn.Tanh(),
-                        nn.Linear(feature_dim, hidden_dim),
+    net = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
                         nn.ReLU(inplace=True),
                         nn.Linear(hidden_dim, hidden_dim),
                         nn.ReLU(inplace=True),
                         nn.Linear(hidden_dim, 1))
 
     trunk = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-#                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
-#                    kernel_size=1)
+        enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
+                   enn.FieldType(act, feature_dim * [act.irrep(1)]),
+                   kernel_size=1)
+#         nn.Linear(repr_dim, feature_dim),
+#         nn.Conv2d(repr_dim, feature_dim, kernel_size=1)
+
     )
 
     if load_weights:
