@@ -152,7 +152,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
-    feature_dim = 256
+    feature_dim = 50
     net1 = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + 
                                  action_shape[0] * [act.irrep(1)]),
