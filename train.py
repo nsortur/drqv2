@@ -153,30 +153,30 @@ def act_net(repr_dim, action_shape, act, load_weights):
 def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
     feature_dim = 50
-#     net1 = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + 
-#                                  action_shape[0] * [act.irrep(1)]),
-#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
-#                    kernel_size=1, padding=0),
-#         enn.ReLU(enn.FieldType(act, hidden_dim *
-#                  [act.regular_repr]), inplace=True),
-#         enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-#                    enn.FieldType(act, 1 * [act.trivial_repr]),
-#                    kernel_size=1, padding=0)
-#     )
-#     net2 = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + 
-#                                  action_shape[0] * [act.irrep(1)]),
-#                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
-#                    kernel_size=1, padding=0),
-#         enn.ReLU(enn.FieldType(act, hidden_dim *
-#                  [act.regular_repr]), inplace=True),
-#         enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
-#         enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
-#                    enn.FieldType(act, 1 * [act.trivial_repr]),
-#                    kernel_size=1, padding=0)
-#     )
+    net1 = nn.Sequential(
+        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + 
+                                 action_shape[0] * [act.irrep(1)]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
+        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
+                   enn.FieldType(act, 1 * [act.trivial_repr]),
+                   kernel_size=1, padding=0)
+    )
+    net2 = nn.Sequential(
+        enn.R2Conv(enn.FieldType(act, feature_dim * [act.regular_repr] + 
+                                 action_shape[0] * [act.irrep(1)]),
+                   enn.FieldType(act, hidden_dim * [act.regular_repr]),
+                   kernel_size=1, padding=0),
+        enn.ReLU(enn.FieldType(act, hidden_dim *
+                 [act.regular_repr]), inplace=True),
+        enn.GroupPooling(enn.FieldType(act, hidden_dim * [act.regular_repr])),
+        enn.R2Conv(enn.FieldType(act, hidden_dim * [act.trivial_repr]),
+                   enn.FieldType(act, 1 * [act.trivial_repr]),
+                   kernel_size=1, padding=0)
+    )
 #     trunk = nn.Sequential(
 #         enn.R2Conv(
 #             enn.FieldType(act, repr_dim * [act.regular_repr]),
@@ -186,19 +186,19 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #         enn.InnerBatchNorm(enn.FieldType(act, repr_dim * [act.regular_repr])),
 #         enn.ReLU(enn.FieldType(act, repr_dim * [act.regular_repr])),
 #     )
-    net1 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
-    )
-    net2 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
-    )
+#     net1 = nn.Sequential(
+#         nn.Linear(feature_dim + action_shape[0], hidden_dim),
+#         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+#         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+#     )
+#     net2 = nn.Sequential(
+#         nn.Linear(feature_dim + action_shape[0], hidden_dim),
+#         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
+#         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
+#     )
     trunk = nn.Sequential(
         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-                   enn.FieldType(act, 1024 * [act.irrep(1)]),
+                   enn.FieldType(act, feature_dim * [act.regular_repr]),
                    kernel_size=1)
 #         nn.Conv2d(repr_dim, feature_dim, kernel_size=1)
 #         nn.Linear(repr_dim, feature_dim),
