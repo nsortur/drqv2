@@ -1,5 +1,5 @@
 # ACTIVATE CONDA ENV BEFORE RUNNING
-jn="0822_6"
+jn="0823_1"
 export TASK_MUJOCO=cartpole_swingup
 
 start_dir=${jn}

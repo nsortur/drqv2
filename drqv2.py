@@ -181,7 +181,7 @@ class Critic(nn.Module):
             [h, action], dim=1).unsqueeze(2).unsqueeze(3)
         obs_action = enn.GeometricTensor(
             obs_action, enn.FieldType(self.c4_act,
-                                    128 * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+                                    256 * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
         q1 = self.Q1(obs_action).tensor.reshape(obs.shape[0], 1)
         q2 = self.Q2(obs_action).tensor.reshape(obs.shape[0], 1)
         return q1, q2
