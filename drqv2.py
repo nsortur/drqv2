@@ -131,6 +131,7 @@ class Critic(nn.Module):
 
         self.action_shape = action_shape
         self.trunk = None
+        self.trunk2 = None
         self.Q1 = None
         self.Q2 = None
         self.c4_act = None
@@ -174,7 +175,8 @@ class Critic(nn.Module):
 
     def forward(self, obs, action):
 
-        h = self.trunk(obs.tensor.view(obs.shape[0], -1))#.tensor
+        h = self.trunk2(obs)
+        h = self.trunk(h.tensor.view(obs.shape[0], -1))#.tensor
         h = torch.tanh(h)
 #         h = h.view(h.shape[0], -1)
         obs_action = torch.cat(
