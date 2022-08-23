@@ -174,7 +174,7 @@ class Critic(nn.Module):
 
     def forward(self, obs, action):
 
-        h = self.trunk(obs.tensor.view(obs.shape[0], -1))#.tensor
+        h = self.trunk(obs).tensor.view(obs.shape[0], -1)
         h = torch.tanh(h)
 #         h = h.view(h.shape[0], -1)
         obs_action = torch.cat(

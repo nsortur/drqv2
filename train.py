@@ -154,7 +154,8 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
     hidden_dim = 1024
     feature_dim = 256
 #     net1 = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]+ action_shape[0] * [act.irrep(1)]),
+#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]
+#                                  + action_shape[0] * [act.regular_repr]),
 #                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
 #                    kernel_size=1, padding=0),
 #         enn.ReLU(enn.FieldType(act, hidden_dim *
@@ -170,7 +171,8 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #                    kernel_size=1, padding=0)
 #     )
 #     net2 = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]+ action_shape[0] * [act.irrep(1)]),
+#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]
+#                                  + action_shape[0] * [act.regular_repr]),
 #                    enn.FieldType(act, hidden_dim * [act.regular_repr]),
 #                    kernel_size=1, padding=0),
 #         enn.ReLU(enn.FieldType(act, hidden_dim *
@@ -205,16 +207,13 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
     trunk = nn.Sequential(
-#         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
-#                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
-#                    kernel_size=1)
-        nn.Linear(1024, feature_dim),
+        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
+                   enn.FieldType(act, 128 * [act.regular_repr]),
+                   kernel_size=1)
+#         nn.Linear(1024, feature_dim),
 #         nn.Tanh()
     )
     trunk2 = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
-                   enn.FieldType(act, 1024 * [act.irrep(1)]),
-                   kernel_size=1)
     )
     if load_weights:
         if target:
