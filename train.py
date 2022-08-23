@@ -92,15 +92,15 @@ def enc_net(obs_shape, act, load_weights):
                                [act.regular_repr]), inplace=True),
         # 1x1
         enn.R2Conv(enn.FieldType(act, n_out * [act.regular_repr]),
-                   enn.FieldType(act, 1024 *
-                                 [act.irrep(1)]),
+                   enn.FieldType(act, 512 *
+                                 [act.regular_repr]),
                    kernel_size=1),
         
     )
     if load_weights:
         dict_init = torch.load(os.path.join(Path.cwd(), 'encWeights.pt'))
         net.load_state_dict(dict_init)
-    return net, 1024
+    return net, 512
 
 
 def act_net(repr_dim, action_shape, act, load_weights):
@@ -136,7 +136,7 @@ def act_net(repr_dim, action_shape, act, load_weights):
 #                         nn.Linear(hidden_dim, 1))
 
     trunk = nn.Sequential(
-        enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
+        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
                    enn.FieldType(act, feature_dim * [act.regular_repr]),
                    kernel_size=1)
 #         nn.Linear(repr_dim, feature_dim),
@@ -208,8 +208,13 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #         enn.R2Conv(enn.FieldType(act, repr_dim * [act.irrep(1)]),
 #                    enn.FieldType(act, feature_dim * [act.irrep(1)]),
 #                    kernel_size=1)
-        nn.Linear(repr_dim, feature_dim),
+        nn.Linear(1024, feature_dim),
 #         nn.Tanh()
+    )
+    trunk2 = nn.Sequential(
+        enn.R2Conv(enn.FieldType(act, repr_dim * [act.regular_repr]),
+                   enn.FieldType(act, 1024 * [act.irrep(1)]),
+                   kernel_size=1)
     )
     if load_weights:
         if target:
@@ -231,7 +236,7 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
         net2.load_state_dict(dict_init2)
         trunk.load_state_dict(dict_init_trunk)
 
-    return net1, net2, trunk
+    return net1, net2, trunk, trunk2
 
 
 def make_agent(obs_spec, action_spec, cfg):
@@ -244,12 +249,12 @@ def make_agent(obs_spec, action_spec, cfg):
     enc, repr_dim = enc_net(cfg.obs_shape, g, load_weights=False)
     act, actTrunk = act_net(repr_dim, cfg.action_shape, g, load_weights=False)
 
-    q1, q2, trunk = crit_net(
+    q1, q2, trunk, trunk2 = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False, target=False)
-    qt1, qt2, trunkT = crit_net(
+    qt1, qt2, trunkT, trunkT2 = crit_net(
         repr_dim, cfg.action_shape, g, load_weights=False, target=True)
     # set networks in agent
-    agent.set_networks(g, repr_dim, enc, act, actTrunk, q1, q2, qt1, qt2, trunk, trunkT)
+    agent.set_networks(g, repr_dim, enc, act, actTrunk, q1, q2, qt1, qt2, trunk, trunkT, trunk2, trunkT2)
     agent.encoder.apply(utils.weight_init)
     agent.actor.apply(utils.weight_init)
     agent.critic.apply(utils.weight_init)
@@ -463,12 +468,12 @@ class Workspace:
         action_shape = self.train_env.action_spec().shape
         enc, repr_dim = enc_net(obs_shape, g, load_weights=True)
         act, actTrunk = act_net(repr_dim, action_shape, g, load_weights=True)
-        q1, q2, trunk = crit_net(
+        q1, q2, trunk, trunk2 = crit_net(
             repr_dim, action_shape, g, load_weights=True, target=False)
-        qt1, qt2, trunkT = crit_net(
+        qt1, qt2, trunkT, trunkT2 = crit_net(
             repr_dim, action_shape, g, load_weights=True, target=True)
         self.agent.set_networks(g, repr_dim, enc, act, actTrunk,
-                                q1, q2, qt1, qt2, trunk, trunkT)
+                                q1, q2, qt1, qt2, trunk, trunkT, trunk2, trunkT2)
         self.agent.encoder.to(self.device)
         self.agent.actor.to(self.device)
         self.agent.critic.to(self.device)
