@@ -174,16 +174,16 @@ class Critic(nn.Module):
 
     def forward(self, obs, action):
 
-        h = self.trunk(obs).tensor.view(obs.shape[0], -1)
-        h = torch.tanh(h)
+        h = self.trunk(obs).tensor#.view(obs.shape[0], -1)
+#         h = torch.tanh(h)
 #         h = h.view(h.shape[0], -1)
         obs_action = torch.cat(
-            [h, action], dim=1)#.unsqueeze(2).unsqueeze(3)
-#         obs_action = enn.GeometricTensor(
-#             obs_action, enn.FieldType(self.c4_act,
-#                                     1024 * [self.c4_act.irrep(1)] + self.action_shape[0] * [self.c4_act.irrep(1)]))
-        q1 = self.Q1(obs_action)#.tensor.reshape(obs.shape[0], 1)
-        q2 = self.Q2(obs_action)#.tensor.reshape(obs.shape[0], 1)
+            [h, action.view(action.shape[0], -1, 1, 1)], dim=1)
+        obs_action = enn.GeometricTensor(
+            obs_action, enn.FieldType(self.c4_act,
+                                    256 * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+        q1 = self.Q1(obs_action).tensor.reshape(obs.shape[0], 1)
+        q2 = self.Q2(obs_action).tensor.reshape(obs.shape[0], 1)
         return q1, q2
 
     def __getstate__(self):
