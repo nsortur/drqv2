@@ -84,31 +84,13 @@ class Actor(nn.Module):
         self.c4_act = None
         self.policy = None
         self.trunk = None
-#         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-#                                    nn.LayerNorm(feature_dim), nn.Tanh())
-#         self.c4_act = gspaces.FlipRot2dOnR2(4)
-#         self.policy = enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr]),
-#                                  enn.FieldType(self.c4_act, 1 * [self.c4_act.irrep(1, 2)]),
-#                                  kernel_size=1, padding=0)
-
-
-#         self.policy = nn.Sequential(nn.Linear(feature_dim, hidden_dim),
-#                                     nn.ReLU(inplace=True),
-#                                     nn.Linear(hidden_dim, hidden_dim),
-#                                     nn.ReLU(inplace=True),
-#                                     nn.Linear(hidden_dim, action_shape[0]))
-
-#         self.apply(utils.weight_init)
 
     def forward(self, obs, std):
-#                           TODO change trunk output to regular
         h = self.trunk(obs)#.tensor.view(obs.shape[0], -1, 1, 1)
 #         h = torch.tanh(h)
 #         h = enn.GeometricTensor(h, enn.FieldType(self.c4_act,
 #                                               50 * [self.c4_act.regular_repr]))
         mu = self.policy(h).tensor.view(obs.shape[0], -1)
-#         assert mu.shape[1:] == torch.Size(
-#             [1]), f'Action output not correct shape: {mu.shape}'
         mu = torch.tanh(mu)
         std = torch.ones_like(mu) * std
 
@@ -135,42 +117,6 @@ class Critic(nn.Module):
         self.Q2 = None
         self.c4_act = None
         self.repr_dim = None
-#         self.trunk = nn.Sequential(nn.Linear(repr_dim, feature_dim),
-#                                    nn.LayerNorm(feature_dim), nn.Tanh())
-
-#         self.Q1 = nn.Sequential(
-#             nn.Linear(feature_dim + action_shape[0], hidden_dim),
-#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-#
-#         self.Q2 = nn.Sequential(
-#             nn.Linear(feature_dim + action_shape[0], hidden_dim),
-#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
-#             nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1))
-#         self.c4_act = gspaces.FlipRot2dOnR2(4)
-#         self.repr_dim = repr_dim
-#         self.Q1 = nn.Sequential(
-#             enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]),
-#                        enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]),
-#                        kernel_size=1, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]), inplace=True),
-#             enn.GroupPooling(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr])),
-#             enn.R2Conv(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.trivial_repr]),
-#                        enn.FieldType(self.c4_act, 1 * [self.c4_act.trivial_repr]),
-#                        kernel_size=1, padding=0)
-#         )
-#         self.Q2 = nn.Sequential(
-#             enn.R2Conv(enn.FieldType(self.c4_act, repr_dim * [self.c4_act.regular_repr] + 1 * [self.c4_act.irrep(1, 2)]),
-#                        enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]),
-#                        kernel_size=1, padding=0),
-#             enn.ReLU(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr]), inplace=True),
-#             enn.GroupPooling(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.regular_repr])),
-#             enn.R2Conv(enn.FieldType(self.c4_act, hidden_dim * [self.c4_act.trivial_repr]),
-#                        enn.FieldType(self.c4_act, 1 * [self.c4_act.trivial_repr]),
-#                        kernel_size=1, padding=0)
-#         )
-#
-#         self.apply(utils.weight_init)
 
     def forward(self, obs, action):
 
