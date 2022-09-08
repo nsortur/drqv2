@@ -125,11 +125,11 @@ class Critic(nn.Module):
 #         h = torch.tanh(h)
 #         h = h.view(h.shape[0], -1)
         obs_action = torch.cat(
-            [h, action], dim=1)#.unsqueeze(2).unsqueeze(3)
-#         obs_action = enn.GeometricTensor(
-#             obs_action, enn.FieldType(self.c4_act,
-#                                     512 * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
-#         obs_action = obs_action.tensor.squeeze()
+            [h, action], dim=1).unsqueeze(2).unsqueeze(3)
+        obs_action = enn.GeometricTensor(
+            obs_action, enn.FieldType(self.c4_act,
+                                    512 * [self.c4_act.regular_repr] + self.action_shape[0] * [self.c4_act.irrep(1)]))
+        obs_action = obs_action.tensor.squeeze()
         q1 = self.Q1(obs_action)#.tensor.reshape(obs.shape[0], 1)
         q2 = self.Q2(obs_action)#.tensor.reshape(obs.shape[0], 1)
         return q1, q2
