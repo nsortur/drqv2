@@ -179,12 +179,12 @@ def crit_net(repr_dim, action_shape, act, load_weights, target):
 #         enn.ReLU(enn.FieldType(act, repr_dim * [act.regular_repr])),
 #     )
     net1 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.Linear(1024 + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
     net2 = nn.Sequential(
-        nn.Linear(feature_dim + action_shape[0], hidden_dim),
+        nn.Linear(1024 + action_shape[0], hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(inplace=True), nn.Linear(hidden_dim, 1)
     )
